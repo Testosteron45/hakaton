@@ -1,0 +1,54 @@
+name: krasnodar_travel
+description: Персонализированный гид по заведениям Краснодара.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Firebase
+  firebase_core: ^3.8.0
+  firebase_auth: ^5.3.4
+  cloud_firestore: ^5.5.0
+
+  # Navigation
+  go_router: ^14.6.2
+
+  # UI
+  appinio_swiper: ^2.0.1
+  cached_network_image: ^3.4.1
+  gap: ^3.0.1
+
+  # Storage
+  shared_preferences: ^2.3.3
+
+  # Utilities
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+  uuid: ^4.5.1
+  intl: ^0.20.1
+  logger: ^2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  build_runner: ^2.4.13
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
+  riverpod_generator: ^2.6.1
+  custom_lint: ^0.7.0
+  riverpod_lint: ^2.6.1
+
+flutter:
+  uses-material-design: true

@@ -1,0 +1,24 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/repositories/venue_repository.dart';
+import '../../data/services/recommendation_service.dart';
+
+// ── Firebase (optional) ───────────────────────────────────────────────────────
+
+final authProvider = Provider<FirebaseAuth>((_) {
+  try {
+    return FirebaseAuth.instance;
+  } catch (_) {
+    rethrow;
+  }
+});
+
+// ── Repositories ──────────────────────────────────────────────────────────────
+
+final venueRepositoryProvider =
+    Provider<VenueRepository>((_) => VenueRepository());
+
+// ── Services ──────────────────────────────────────────────────────────────────
+
+final recommendationServiceProvider = Provider<RecommendationService>(
+    (ref) => RecommendationService(ref.read(venueRepositoryProvider)));
