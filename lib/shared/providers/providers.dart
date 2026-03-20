@@ -3,15 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/venue_repository.dart';
 import '../../data/services/recommendation_service.dart';
 
-// ── Firebase (optional) ───────────────────────────────────────────────────────
+// ── Firebase ──────────────────────────────────────────────────────────────────
 
-final authProvider = Provider<FirebaseAuth>((_) {
-  try {
-    return FirebaseAuth.instance;
-  } catch (_) {
-    rethrow;
-  }
-});
+final authProvider = Provider<FirebaseAuth>((_) => FirebaseAuth.instance);
+
+final authStateProvider = StreamProvider<User?>(
+  (_) => FirebaseAuth.instance.authStateChanges(),
+);
 
 // ── Repositories ──────────────────────────────────────────────────────────────
 

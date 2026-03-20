@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "372896158154",
+    "project_id": "krasnodar-travel",
+    "storage_bucket": "krasnodar-travel.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:372896158154:android:ef4598aa5dc3be4a593f33",
+        "android_client_info": {
+          "package_name": "com.krasnodartravel.krasnodar_travel"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZFSCDcQEKLfKtJrNxdUEaUh5wkkUPzTM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
