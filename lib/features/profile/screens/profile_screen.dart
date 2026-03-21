@@ -50,6 +50,9 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 10),
+                    const _ThemeToggleButton(),
+                    const SizedBox(width: 10),
                     _TopButton(
                       icon: Icons.logout_rounded,
                       onTap: () async {
@@ -582,6 +585,106 @@ class _TopButton extends StatelessWidget {
           icon,
           color: Theme.of(context).colorScheme.onSurface,
           size: 20,
+        ),
+      ),
+    );
+  }
+}
+
+class _ThemeToggleButton extends ConsumerWidget {
+  const _ThemeToggleButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    final isDark = themeMode == ThemeMode.dark;
+
+    return Semantics(
+      button: true,
+      label: isDark ? 'Включить светлую тему' : 'Включить тёмную тему',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => ref.read(themeModeProvider.notifier).toggle(),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            width: 74,
+            height: 44,
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : AppColors.softBorder,
+              ),
+            ),
+            child: Stack(
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Icon(
+                      Icons.light_mode_rounded,
+                      size: 16,
+                      color: isDark
+                          ? Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.color?.withValues(alpha: 0.5)
+                          : AppColors.primary,
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Icon(
+                      Icons.dark_mode_rounded,
+                      size: 16,
+                      color: isDark
+                          ? AppColors.primary
+                          : Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+                AnimatedAlign(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  alignment:
+                      isDark ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.28),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      isDark
+                          ? Icons.dark_mode_rounded
+                          : Icons.light_mode_rounded,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

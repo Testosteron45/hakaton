@@ -67,18 +67,24 @@ class AppViewport extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final location = router.routeInformationProvider.value.uri.path;
-    final showAssistant = !{
-      '/loading',
-      '/auth',
-      '/onboarding',
-    }.contains(location);
+    return ValueListenableBuilder<RouteInformation>(
+      valueListenable: router.routeInformationProvider,
+      builder: (context, routeInformation, _) {
+        final location = routeInformation.uri.path;
+        final showAssistant = !{
+          '/loading',
+          '/auth',
+          '/onboarding',
+          '/assistant-chat',
+        }.contains(location);
 
-    return Stack(
-      children: [
-        child,
-        if (showAssistant) const GlobalAssistantOverlay(),
-      ],
+        return Stack(
+          children: [
+            child,
+            if (showAssistant) const GlobalAssistantOverlay(),
+          ],
+        );
+      },
     );
   }
 }

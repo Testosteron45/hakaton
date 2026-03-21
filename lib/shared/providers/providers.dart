@@ -3,9 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/constants/app_constants.dart';
 import '../../data/models/user_profile.dart';
 import '../../data/repositories/user_profile_repository.dart';
 import '../../data/repositories/venue_repository.dart';
+import '../../core/services/groq_service.dart';
 import '../../data/services/recommendation_service.dart';
 import '../../data/services/venue_seed_service.dart';
 
@@ -91,3 +93,13 @@ class ThemeModeController extends StateNotifier<ThemeMode> {
 
 final recommendationServiceProvider = Provider<RecommendationService>(
     (ref) => RecommendationService(ref.read(venueRepositoryProvider)));
+
+final groqServiceProvider = Provider<GroqService>((ref) {
+  final service = GroqService(apiKey: AppConstants.groqApiKey);
+  ref.onDispose(service.dispose);
+  return service;
+});
+
+final groqConfiguredProvider = Provider<bool>((ref) {
+  return ref.watch(groqServiceProvider).isConfigured;
+});

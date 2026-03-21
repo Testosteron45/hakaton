@@ -13,14 +13,12 @@ class KazakAssistantCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final snapshot = ref.watch(kazakAssistantSnapshotProvider);
     final actions = ref.read(kazakAssistantActionsProvider);
-    final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == ThemeMode.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final scheme = Theme.of(context).colorScheme;
-    final surface = Theme.of(context).cardColor;
 
     return Container(
       decoration: BoxDecoration(
-        color: surface,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(30),
         border: Border.all(
           color: isDark
@@ -69,7 +67,7 @@ class KazakAssistantCard extends ConsumerWidget {
                       ),
                       SizedBox(height: 2),
                       Text(
-                        'Глобальный помощник и внешний вид',
+                        'Живой ассистент. Тап по модели = нейро-ответ.',
                         style: TextStyle(
                           fontSize: 13,
                           color: Theme.of(context).textTheme.bodyMedium?.color,
@@ -86,37 +84,24 @@ class KazakAssistantCard extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 12),
+            Center(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => actions.generateAiReply(),
+                child: KazakAssistantView(
+                  customization: snapshot.customization,
+                  mood: snapshot.mood,
+                  size: 230,
+                  showLoadout: false,
+                  showBadges: false,
+                  showFrame: false,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : AppColors.surfaceVariant,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: KazakAssistantView(
-                customization: snapshot.customization,
-                mood: snapshot.mood,
-                size: 220,
-                showLoadout: false,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _SpeechBubble(text: snapshot.message),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: snapshot.supportingStats
-                  .map(
-                    (item) => _MiniPill(label: item, isDark: isDark),
-                  )
-                  .toList(),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: isDark
                     ? Colors.white.withValues(alpha: 0.05)
@@ -126,47 +111,30 @@ class KazakAssistantCard extends ConsumerWidget {
               child: Row(
                 children: [
                   Icon(
-                    isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                    Icons.touch_app_rounded,
                     color: isDark ? AppColors.accent : AppColors.primary,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Тёмный режим',
+                      snapshot.message,
                       style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        height: 1.45,
                         color: scheme.onSurface,
                       ),
                     ),
                   ),
-                  Switch.adaptive(
-                    value: isDark,
-                    onChanged: (_) =>
-                        ref.read(themeModeProvider.notifier).toggle(),
-                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton.tonalIcon(
-                    onPressed: actions.surprise,
-                    icon: const Icon(Icons.music_note_rounded),
-                    label: Text(snapshot.ctaLabel),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showCustomizer(context),
-                    icon: const Icon(Icons.checkroom_rounded),
-                    label: const Text('Переодеть'),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: snapshot.supportingStats
+                  .map((item) => _MiniPill(label: item, isDark: isDark))
+                  .toList(),
             ),
           ],
         ),

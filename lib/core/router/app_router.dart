@@ -9,6 +9,7 @@ import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/map/screens/krasnodar_map_screen.dart';
 import '../../features/profile/screens/loading_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
+import '../../features/profile/screens/assistant_chat_screen.dart';
 import '../../features/session_mode/screens/session_mode_screen.dart';
 import '../../features/swipe_session/screens/swipe_session_screen.dart';
 import '../../features/recommendation/screens/recommendation_screen.dart';
@@ -52,6 +53,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile',
         builder: (_, __) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/assistant-chat',
+        builder: (_, __) => const AssistantChatScreen(),
       ),
       GoRoute(
         path: '/map',

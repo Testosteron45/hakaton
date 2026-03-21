@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../../core/constants/app_colors.dart';
 import '../providers/assistant_provider.dart';
 import 'kazak_assistant_view.dart';
@@ -52,7 +54,7 @@ class _GlobalAssistantOverlayState
                   behavior: HitTestBehavior.translucent,
                   onTap: () {
                     setState(() => _expanded = true);
-                    actions.surprise();
+                    actions.generateAiReply();
                   },
                   onPanUpdate: (details) {
                     setState(() {
@@ -79,18 +81,35 @@ class _GlobalAssistantOverlayState
               ),
               if (_expanded)
                 Positioned(
+                  left: math.max(8, position.dx - 6),
+                  top: math.min(
+                    math.max(8.0, viewport.height - 52),
+                    position.dy + modelSize + 6,
+                  ),
+                  child: PointerInterceptor(
+                    child: _AssistantActionButton(
+                      label: 'Поболтать с ботом',
+                      onTap: () {
+                        setState(() => _expanded = false);
+                        context.push('/assistant-chat');
+                      },
+                    ),
+                  ),
+                ),
+              if (_expanded)
+                Positioned(
                   left: math.max(12, position.dx + modelSize - bubbleWidth + 12),
                   top: math.max(8, position.dy - 124),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: bubbleWidth),
-                    child: _AssistantSpeechBubble(
-                      isDark: isDark,
-                      onSurface: scheme.onSurface,
-                      headline: snapshot.headline,
-                      message: snapshot.message,
-                      ctaLabel: snapshot.ctaLabel,
-                      onRefresh: actions.surprise,
-                      onClose: () => setState(() => _expanded = false),
+                  child: PointerInterceptor(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: bubbleWidth),
+                      child: _AssistantSpeechBubble(
+                        isDark: isDark,
+                        onSurface: scheme.onSurface,
+                        headline: snapshot.headline,
+                        message: snapshot.message,
+                        onClose: () => setState(() => _expanded = false),
+                      ),
                     ),
                   ),
                 ),
@@ -116,8 +135,6 @@ class _AssistantSpeechBubble extends StatelessWidget {
     required this.onSurface,
     required this.headline,
     required this.message,
-    required this.ctaLabel,
-    required this.onRefresh,
     required this.onClose,
   });
 
@@ -125,8 +142,6 @@ class _AssistantSpeechBubble extends StatelessWidget {
   final Color onSurface;
   final String headline;
   final String message;
-  final String ctaLabel;
-  final VoidCallback onRefresh;
   final VoidCallback onClose;
 
   @override
@@ -192,12 +207,69 @@ class _AssistantSpeechBubble extends StatelessWidget {
                 color: Theme.of(context).textTheme.bodyMedium?.color,
               ),
             ),
-            const SizedBox(height: 12),
-            FilledButton.tonal(
-              onPressed: onRefresh,
-              child: Text(ctaLabel),
-            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AssistantActionButton extends StatelessWidget {
+  const _AssistantActionButton({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.surfaceDark.withValues(alpha: 0.96)
+                : Colors.white.withValues(alpha: 0.97),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : AppColors.softBorder,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.24 : 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.chat_bubble_rounded,
+                size: 16,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

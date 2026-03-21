@@ -222,6 +222,7 @@ class _Real3DModel extends StatelessWidget {
             height: 100%;
             background: transparent;
             --poster-color: transparent;
+            ${enableInteraction ? '' : 'pointer-events: none; touch-action: none;'}
           }
         ''',
         debugLogging: false,
