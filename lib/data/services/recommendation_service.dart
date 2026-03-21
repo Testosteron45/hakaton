@@ -1,3 +1,4 @@
+import '../models/user_profile.dart';
 import '../models/venue.dart';
 import '../models/swipe_session.dart';
 import '../repositories/venue_repository.dart';
@@ -37,7 +38,7 @@ class RecommendationService {
 
   final VenueRepository _repo;
 
-  RecommendationResult recommend(SwipeSession session) {
+  RecommendationResult recommend(SwipeSession session, {UserProfile? profile}) {
     final likedVenues = <Venue>[];
     final dislikedVenues = <Venue>[];
 
@@ -60,7 +61,7 @@ class RecommendationService {
     final candidates = _repo.getAll().where((v) => !shownIds.contains(v.id)).toList();
 
     final scored = candidates.map((v) {
-      return _MapEntry(v, _score(v, prefs, likedVenues, dislikedVenues));
+      return _MapEntry(v, _score(v, prefs, likedVenues, dislikedVenues, profile));
     }).toList();
 
     scored.sort((a, b) => b.score.compareTo(a.score));
@@ -181,6 +182,7 @@ class RecommendationService {
     InferredPreferences prefs,
     List<Venue> liked,
     List<Venue> disliked,
+    UserProfile? profile,
   ) {
     double score = 0;
 
@@ -224,6 +226,20 @@ class RecommendationService {
       final tagMatches =
           v.tags.where((t) => prefs.preferredTags.contains(t)).length;
       score += (tagMatches * 0.5).clamp(0.0, 3.0);
+    }
+
+    // History boost from accumulated profile (mild — session swipes take precedence)
+    if (profile != null && profile.totalSessions > 0) {
+      final typeCount = profile.likedTypes[v.type.name] ?? 0;
+      score += (typeCount * 0.3).clamp(0.0, 1.5);
+
+      final featureBoost = v.features
+          .map((f) => profile.likedFeatures[f.name] ?? 0)
+          .fold(0, (a, b) => a + b);
+      score += (featureBoost * 0.2).clamp(0.0, 1.0);
+
+      final priceCount = profile.preferredPrice[v.price.name] ?? 0;
+      score += (priceCount * 0.15).clamp(0.0, 0.5);
     }
 
     return score;

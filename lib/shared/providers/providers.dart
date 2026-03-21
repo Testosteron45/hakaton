@@ -57,6 +57,16 @@ final userProfileProvider = FutureProvider<UserProfile?>((ref) async {
   return ref.read(userProfileRepositoryProvider).load(user.uid);
 });
 
+/// Loads swipe stats for all venues owned by the user.
+final ownedVenueStatsProvider = FutureProvider<List<VenueStats>>((ref) async {
+  final profile = await ref.watch(userProfileProvider.future);
+  final ids = profile?.ownedVenueIds ?? [];
+  if (ids.isEmpty) return [];
+  final repo = ref.read(venueRepositoryProvider);
+  final results = await Future.wait(ids.map((id) => repo.loadVenueStats(id)));
+  return results.whereType<VenueStats>().toList();
+});
+
 // ── App settings ──────────────────────────────────────────────────────────────
 
 const _themeModeKey = 'app_theme_mode';

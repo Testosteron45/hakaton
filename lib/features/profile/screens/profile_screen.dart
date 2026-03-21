@@ -5,6 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/models/venue.dart';
 import '../../../shared/providers/providers.dart';
+import '../../../data/repositories/venue_repository.dart' show VenueStats;
 import '../widgets/kazak_assistant_card.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -178,11 +179,31 @@ class ProfileScreen extends ConsumerWidget {
             const SliverToBoxAdapter(child: SizedBox(height: 8)),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
                 child: OutlinedButton.icon(
                   onPressed: () => context.push('/onboarding'),
                   icon: const Icon(Icons.tune_rounded),
                   label: const Text('Перенастроить интересы'),
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 28)),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _SectionTitle(
+                  title: 'Моё заведение',
+                  subtitle: 'Добавьте своё место и смотрите, как на него реагируют.',
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                child: _MyVenueSection(
+                  onAdd: () => context.push('/add-venue'),
+                  onTap: (id) => context.push('/my-venue', extra: id),
                 ),
               ),
             ),
@@ -933,6 +954,232 @@ String? _featureLabel(VenueFeature feature) => switch (feature) {
       VenueFeature.historical => 'История',
       VenueFeature.nature => 'Природа',
     };
+
+class _AddVenueTile extends StatelessWidget {
+  const _AddVenueTile({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : AppColors.softBorder,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.add_business_rounded,
+                  color: AppColors.primary),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Добавить своё заведение',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Оно появится в свайп-сессиях и вы\nувидите реакцию пользователей',
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.4,
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MyVenueSection extends ConsumerWidget {
+  const _MyVenueSection({required this.onAdd, required this.onTap});
+  final VoidCallback onAdd;
+  final void Function(String venueId) onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(ownedVenueStatsProvider);
+    final profile = ref.watch(userProfileProvider).valueOrNull;
+    final ids = profile?.ownedVenueIds ?? [];
+
+    return Column(
+      children: [
+        // One tile per venue
+        ...statsAsync.when(
+          loading: () => ids.map((id) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _VenueStatsTile(
+                  stats: null,
+                  venueId: id,
+                  onTap: () => onTap(id),
+                ),
+              )),
+          error: (_, __) => [],
+          data: (statsList) => List.generate(ids.length, (i) {
+            final id = ids[i];
+            final stats = i < statsList.length ? statsList[i] : null;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _VenueStatsTile(
+                stats: stats,
+                venueId: id,
+                onTap: () => onTap(id),
+              ),
+            );
+          }),
+        ),
+        // Always show Add button
+        _AddVenueTile(onTap: onAdd),
+      ],
+    );
+  }
+}
+
+class _VenueStatsTile extends StatelessWidget {
+  const _VenueStatsTile({
+    required this.stats,
+    required this.venueId,
+    required this.onTap,
+  });
+  final VenueStats? stats;
+  final String venueId;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.primary.withValues(alpha: isDark ? 0.3 : 0.12),
+              AppColors.secondary.withValues(alpha: isDark ? 0.2 : 0.07),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.storefront_rounded,
+                      color: AppColors.primary, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    stats?.name ?? '...',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                const Icon(Icons.bar_chart_rounded,
+                    color: AppColors.primary, size: 20),
+              ],
+            ),
+            if (stats != null) ...[
+              const SizedBox(height: 12),
+              if (stats!.impressions == 0)
+                Text(
+                  'Ещё не попало в сессии',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                  ),
+                )
+              else
+                Row(
+                  children: [
+                    _mini(context, '${stats!.impressions}',
+                        Icons.visibility_rounded, AppColors.secondary),
+                    const SizedBox(width: 12),
+                    _mini(context, '${stats!.likes}',
+                        Icons.thumb_up_rounded, AppColors.success),
+                    const SizedBox(width: 12),
+                    _mini(context, '${stats!.dislikes}',
+                        Icons.thumb_down_rounded, AppColors.error),
+                    const Spacer(),
+                    Text(
+                      '${(stats!.likeRate * 100).toStringAsFixed(0)}% 👍',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: stats!.likeRate >= 0.7
+                            ? AppColors.success
+                            : stats!.likeRate >= 0.4
+                                ? AppColors.accent
+                                : AppColors.error,
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _mini(BuildContext ctx, String v, IconData icon, Color color) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 3),
+          Text(v,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(ctx).colorScheme.onSurface)),
+        ],
+      );
+}
 
 IconData _typeIcon(VenueType type) => switch (type) {
       VenueType.restaurant => Icons.restaurant_rounded,
