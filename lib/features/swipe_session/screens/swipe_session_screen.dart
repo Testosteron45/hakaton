@@ -16,14 +16,17 @@ class SwipeSessionScreen extends ConsumerStatefulWidget {
   ConsumerState<SwipeSessionScreen> createState() => _SwipeSessionScreenState();
 }
 
-class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen> {
+class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen>
+    with SingleTickerProviderStateMixin {
   late final AppinioSwiperController _controller;
+  late final AnimationController _detailsController;
   bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
     _controller = AppinioSwiperController();
+    _detailsController = AnimationController(vsync: this);
   }
 
   @override
@@ -39,25 +42,83 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen> {
 
   @override
   void dispose() {
+    _detailsController.dispose();
     _controller.dispose();
     super.dispose();
   }
 
   void _onSwipe(int previousIndex, int targetIndex, SwiperActivity activity) {
+    if (activity is! Swipe) return;
+    _closeDetails();
+
     final session = ref.read(swipeSessionProvider);
     if (session == null) return;
     if (previousIndex >= session.queue.length) return;
 
     final venue = session.queue[previousIndex];
-    final liked =
-        activity is Swipe && activity.direction == AxisDirection.right;
-
+    final liked = activity.direction == AxisDirection.right;
     ref.read(swipeSessionProvider.notifier).swipe(venue.id, liked);
 
     final updated = ref.read(swipeSessionProvider);
     if (updated != null && updated.isFinished) {
       context.pushReplacement('/result');
     }
+  }
+
+  void _closeDetails() {
+    _detailsController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _swipeLeft() {
+    _closeDetails();
+    _controller.swipeLeft();
+  }
+
+  void _swipeRight() {
+    _closeDetails();
+    _controller.swipeRight();
+  }
+
+  void _handleCardVerticalDragUpdate(
+    DragUpdateDetails details,
+    double revealExtent,
+  ) {
+    final next =
+        _detailsController.value - (details.delta.dy / revealExtent);
+    _detailsController.value = next.clamp(0.0, 1.0);
+  }
+
+  void _handleCardVerticalDragEnd(
+    DragEndDetails details,
+    double revealExtent,
+  ) {
+    final velocity = -(details.primaryVelocity ?? 0) / revealExtent;
+
+    if (velocity > 1.5) {
+      _detailsController.animateTo(
+        1.0,
+        duration: const Duration(milliseconds: 360),
+        curve: Curves.easeOutCubic,
+      );
+      return;
+    }
+    if (velocity < -1.5) {
+      _detailsController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+      return;
+    }
+    _detailsController.animateTo(
+      _detailsController.value > 0.38 ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   @override
@@ -86,17 +147,13 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen> {
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
               child: Row(
                 children: [
-                  // Map
                   _CircleBtn(
                     icon: Icons.explore_rounded,
                     backgroundColor: AppColors.primary,
                     iconColor: Colors.white,
                     onTap: () => context.push('/map'),
                   ),
-
                   const SizedBox(width: 10),
-
-                  // Back
                   _CircleBtn(
                     icon: Icons.arrow_back_rounded,
                     onTap: () {
@@ -104,10 +161,7 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen> {
                       context.pop();
                     },
                   ),
-
                   const SizedBox(width: 12),
-
-                  // Progress bar + mode label
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,10 +188,7 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen> {
                       ],
                     ),
                   ),
-
                   const SizedBox(width: 12),
-
-                  // Counter badge
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 10),
@@ -164,22 +215,53 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: AppinioSwiper(
-                  controller: _controller,
-                  cardCount: session.queue.length,
-                  initialIndex: session.currentIndex,
-                  onSwipeEnd: _onSwipe,
-                  swipeOptions: const SwipeOptions.only(
-                    left: true,
-                    right: true,
-                  ),
-                  backgroundCardScale: 0.95,
-                  backgroundCardCount: 2,
-                  cardBuilder: (context, index) {
-                    if (index >= session.queue.length) {
-                      return const SizedBox.shrink();
-                    }
-                    return VenueCard(venue: session.queue[index]);
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final revealExtent =
+                        (constraints.maxHeight * 0.45).clamp(240.0, 340.0);
+
+                    return AnimatedBuilder(
+                      animation: _detailsController,
+                      builder: (context, _) => SizedBox(
+                        height: constraints.maxHeight,
+                        child: AppinioSwiper(
+                          controller: _controller,
+                          cardCount: session.queue.length,
+                          initialIndex: session.currentIndex,
+                          onSwipeEnd: _onSwipe,
+                          swipeOptions: const SwipeOptions.only(
+                            left: true,
+                            right: true,
+                          ),
+                          backgroundCardScale: 0.95,
+                          backgroundCardCount: 2,
+                          cardBuilder: (context, index) {
+                            if (index >= session.queue.length) {
+                              return const SizedBox.shrink();
+                            }
+                            final isTopCard = index == session.currentIndex;
+                            return VenueCard(
+                              venue: session.queue[index],
+                              detailsProgress:
+                                  isTopCard ? _detailsController.value : 0,
+                              detailsExtent: revealExtent,
+                              onDetailsDragUpdate: isTopCard
+                                  ? (d) => _handleCardVerticalDragUpdate(
+                                        d,
+                                        revealExtent,
+                                      )
+                                  : null,
+                              onDetailsDragEnd: isTopCard
+                                  ? (d) => _handleCardVerticalDragEnd(
+                                        d,
+                                        revealExtent,
+                                      )
+                                  : null,
+                            );
+                          },
+                        ),
+                      ),
+                    );
                   },
                 ),
               ),
@@ -193,28 +275,23 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Dislike
                   _ActionBtn(
                     icon: Icons.close_rounded,
                     color: AppColors.error,
-                    onTap: () => _controller.swipeLeft(),
+                    onTap: _swipeLeft,
                   ),
                   const SizedBox(width: 24),
-
-                  // Like — bigger
                   _ActionBtn(
                     icon: Icons.favorite_rounded,
                     color: AppColors.success,
-                    onTap: () => _controller.swipeRight(),
+                    onTap: _swipeRight,
                     large: true,
                   ),
                   const SizedBox(width: 24),
-
-                  // Skip
                   _ActionBtn(
                     icon: Icons.skip_next_rounded,
                     color: Colors.white30,
-                    onTap: () => _controller.swipeLeft(),
+                    onTap: _swipeLeft,
                   ),
                 ],
               ),

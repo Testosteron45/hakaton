@@ -10,10 +10,10 @@ class KazakAssistantView extends StatelessWidget {
     required this.customization,
     required this.mood,
     this.size = 280,
-    this.showLoadout = true,
+    this.showLoadout = false,
     this.showBadges = true,
     this.showFrame = true,
-    this.showDecorations = true,
+    this.showDecorations = false,
     this.enableModelInteraction = true,
   });
 
@@ -69,15 +69,6 @@ class KazakAssistantView extends StatelessWidget {
                       backdrop: customization.backdrop,
                       enableInteraction: enableModelInteraction,
                     ),
-                  ),
-                ),
-                Positioned(
-                  left: size * 0.18,
-                  right: size * 0.18,
-                  bottom: showFrame ? 18 : 6,
-                  child: _FloorGlow(
-                    primary: customization.costumeColor.primary,
-                    secondary: customization.costumeColor.secondary,
                   ),
                 ),
                 if (showDecorations)

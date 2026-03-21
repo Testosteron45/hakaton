@@ -12,7 +12,6 @@ class KazakAssistantCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final snapshot = ref.watch(kazakAssistantSnapshotProvider);
-    final saving = ref.watch(kazakAssistantSavingProvider);
     final actions = ref.read(kazakAssistantActionsProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode == ThemeMode.dark;
@@ -80,8 +79,7 @@ class KazakAssistantCard extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
-                  onPressed:
-                      saving ? null : () => _showCustomizer(context, ref),
+                  onPressed: () => _showCustomizer(context),
                   icon: const Icon(Icons.auto_fix_high_rounded),
                   color: AppColors.textPrimary,
                 ),
@@ -163,8 +161,7 @@ class KazakAssistantCard extends ConsumerWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed:
-                        saving ? null : () => _showCustomizer(context, ref),
+                    onPressed: () => _showCustomizer(context),
                     icon: const Icon(Icons.checkroom_rounded),
                     label: const Text('Переодеть'),
                   ),
@@ -177,13 +174,8 @@ class KazakAssistantCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _showCustomizer(BuildContext context, WidgetRef ref) async {
-    final snapshot = ref.read(kazakAssistantSnapshotProvider);
-    final actions = ref.read(kazakAssistantActionsProvider);
-
-    actions.stageCustomization(snapshot.customization);
-
-    final didSave = await showModalBottomSheet<bool>(
+  Future<void> _showCustomizer(BuildContext context) async {
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
@@ -191,31 +183,14 @@ class KazakAssistantCard extends ConsumerWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final saving = ref.watch(kazakAssistantSavingProvider);
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: KazakCustomizerSheet(
-                initialCustomization: snapshot.customization,
-                isSaving: saving,
-                onChanged: actions.stageCustomization,
-                onSave: (customization) async {
-                  await actions.saveCustomization(customization);
-                  if (context.mounted) Navigator.of(context).pop(true);
-                },
-              ),
-            );
-          },
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: const KazakCustomizerSheet(),
         );
       },
     );
-
-    if (didSave != true) {
-      actions.resetDraft();
-    }
   }
 }
 

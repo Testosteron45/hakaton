@@ -59,12 +59,8 @@ final kazakAssistantCustomizationDraftProvider =
 });
 
 final kazakAssistantCustomizationProvider =
-    Provider.autoDispose<AssistantCustomization>((ref) {
-  final draft = ref.watch(kazakAssistantCustomizationDraftProvider);
-  if (draft != null) return draft;
-
-  final profile = ref.watch(userProfileProvider).valueOrNull;
-  return profile?.assistantCustomization ?? AssistantCustomization.defaults;
+    Provider.autoDispose<AssistantCustomization>((_) {
+  return AssistantCustomization.defaults;
 });
 
 final kazakAssistantSnapshotProvider =
@@ -246,7 +242,7 @@ List<(String, String)> _buildPhrases({
     ),
     (
       'Казачий инсайт',
-      'Если захочешь, я ещё и приоденусь. Сейчас у меня цель одна: чтобы ты быстрее находил нормальные места, а не листал всё подряд.',
+      'Сейчас я работаю без лишнего маскарада. Цель одна: чтобы ты быстрее находил нормальные места, а не листал всё подряд.',
     ),
   ];
 }
