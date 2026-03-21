@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,193 +17,212 @@ class RecommendationScreen extends ConsumerWidget {
 
     if (result == null) {
       return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('Нет данных', style: TextStyle(fontSize: 18)),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  ref.read(swipeSessionProvider.notifier).reset();
-                  context.go('/modes');
-                },
-                child: const Text('На главную'),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.layers_clear_rounded,
+                    size: 64,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Нет результатов',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Пройди сессию свайпов, чтобы получить рекомендации.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: () {
+                      ref.read(swipeSessionProvider.notifier).reset();
+                      context.go('/modes');
+                    },
+                    child: const Text('На главную'),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          // Hero header with first recommendation
-          SliverAppBar(
-            expandedHeight: 320,
-            pinned: true,
-            backgroundColor: AppColors.primary,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () {
-                ref.read(swipeSessionProvider.notifier).reset();
-                context.go('/modes');
-              },
-            ),
-            title: const Text('Ваш результат',
-                style: TextStyle(color: Colors.white)),
-            flexibleSpace: FlexibleSpaceBar(
-              background: result.topVenues.isNotEmpty
-                  ? Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        CachedNetworkImage(
-                          imageUrl: result.topVenues.first.photoUrl,
-                          fit: BoxFit.cover,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SafeArea(
+        child: CustomScrollView(
+          slivers: [
+            // ── Top bar ───────────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Row(
+                  children: [
+                    _TopBtn(
+                      icon: Icons.arrow_back_rounded,
+                      onTap: () {
+                        ref.read(swipeSessionProvider.notifier).reset();
+                        context.go('/modes');
+                      },
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        'Ваш результат',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
-                        const DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [Colors.transparent, Colors.black87],
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 20,
-                          left: 20,
-                          right: 20,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.accent,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: const Text('⭐ Лучший выбор',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold)),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                result.topVenues.first.name,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    )
-                  : null,
-            ),
-          ),
-
-          // Explanation
-          SliverToBoxAdapter(
-            child: Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: AppColors.primary.withOpacity(0.2)),
-              ),
-              child: Row(
-                children: [
-                  const Text('🤖', style: TextStyle(fontSize: 24)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      result.explanation,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textPrimary,
-                        height: 1.5,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Top venues list
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: Text(
-                'Топ ${result.topVenues.length} рекомендации',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                    _TopBtn(
+                      icon: Icons.refresh_rounded,
+                      onTap: () {
+                        ref.read(swipeSessionProvider.notifier).reset();
+                        context.go('/modes');
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
 
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final venue = result.topVenues[index];
-                return _VenueResultCard(
-                  venue: venue,
-                  rank: index + 1,
-                );
-              },
-              childCount: result.topVenues.length,
-            ),
-          ),
+            const SliverToBoxAdapter(child: SizedBox(height: 20)),
 
-          // Preferences summary
-          if (result.inferredPreferences.preferredFeatures.isNotEmpty)
+            // ── Explanation pill ──────────────────────────────────────────
             SliverToBoxAdapter(
-              child: _PreferencesSummary(prefs: result.inferredPreferences),
-            ),
-
-          // Again button
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  ref.read(swipeSessionProvider.notifier).reset();
-                  context.go('/modes');
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('Новая сессия'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(52),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.auto_awesome_rounded,
+                          color: AppColors.primary,
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          result.explanation,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Theme.of(context).colorScheme.onSurface,
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+            // ── Section title ─────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  'Топ ${result.topVenues.length} мест для вас',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 14)),
+
+            // ── Results list ──────────────────────────────────────────────
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _ResultCard(
+                    venue: result.topVenues[index],
+                    rank: index + 1,
+                  ),
+                  childCount: result.topVenues.length,
+                ),
+              ),
+            ),
+
+            // ── Taste profile ─────────────────────────────────────────────
+            if (result.inferredPreferences.preferredFeatures.isNotEmpty) ...[
+              const SliverToBoxAdapter(child: SizedBox(height: 10)),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _TasteProfile(prefs: result.inferredPreferences),
+                ),
+              ),
+            ],
+
+            // ── CTA ───────────────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+                child: FilledButton.icon(
+                  onPressed: () {
+                    ref.read(swipeSessionProvider.notifier).reset();
+                    context.go('/modes');
+                  },
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Новая сессия'),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _VenueResultCard extends StatelessWidget {
-  const _VenueResultCard({required this.venue, required this.rank});
+// ── Result card ───────────────────────────────────────────────────────────────
+
+class _ResultCard extends StatelessWidget {
+  const _ResultCard({required this.venue, required this.rank});
 
   final Venue venue;
   final int rank;
@@ -211,174 +231,236 @@ class _VenueResultCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final medals = ['🥇', '🥈', '🥉'];
     final medal = rank <= 3 ? medals[rank - 1] : '$rank';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : AppColors.softBorder,
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Photo
-          ClipRRect(
-            borderRadius: const BorderRadius.horizontal(
-                left: Radius.circular(16)),
-            child: SizedBox(
-              width: 100,
-              height: 100,
-              child: CachedNetworkImage(
-                imageUrl: venue.photoUrl,
-                fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => Container(
-                  color: Colors.grey.shade200,
-                  child: const Icon(Icons.image, color: Colors.grey),
+        ),
+        child: Row(
+          children: [
+            // Photo
+            ClipRRect(
+              borderRadius:
+                  const BorderRadius.horizontal(left: Radius.circular(22)),
+              child: SizedBox(
+                width: 110,
+                height: 110,
+                child: _RecommendationPhoto(imageUrl: venue.photoUrl),
+              ),
+            ),
+
+            // Info
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(medal, style: const TextStyle(fontSize: 16)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            venue.name,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      venue.address,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _tag(
+                          _distLabel(venue.distance),
+                          AppColors.surfaceVariant,
+                          AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 6),
+                        _tag(
+                          _priceLabel(venue.price),
+                          AppColors.primary.withValues(alpha: 0.1),
+                          AppColors.primary,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
-
-          // Info
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(medal, style: const TextStyle(fontSize: 18)),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          venue.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: AppColors.textPrimary,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    venue.description,
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.textSecondary),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      _smallChip(_distLabel(venue.distance),
-                          Colors.grey.shade200, AppColors.textSecondary),
-                      const SizedBox(width: 4),
-                      _smallChip(
-                          _priceLabel(venue.price),
-                          AppColors.primary.withOpacity(0.1),
-                          AppColors.primary),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   String _distLabel(DistanceTag d) => switch (d) {
-        DistanceTag.near => '📍 Рядом',
-        DistanceTag.medium => '🚗 Недалеко',
-        DistanceTag.far => '✈️ Далеко',
+        DistanceTag.near => 'Рядом',
+        DistanceTag.medium => '~30 мин',
+        DistanceTag.far => 'Далеко',
       };
 
   String _priceLabel(PriceTag p) => switch (p) {
-        PriceTag.budget => '💰 Бесплатно/дёшево',
-        PriceTag.mid => '💳 Средний чек',
-        PriceTag.premium => '💎 Премиум',
+        PriceTag.budget => '₽',
+        PriceTag.mid => '₽₽',
+        PriceTag.premium => '₽₽₽',
       };
-
-  Widget _smallChip(String label, Color bg, Color fg) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(label,
-            style: TextStyle(fontSize: 10, color: fg)),
-      );
 }
 
-class _PreferencesSummary extends StatelessWidget {
-  const _PreferencesSummary({required this.prefs});
+class _RecommendationPhoto extends StatelessWidget {
+  const _RecommendationPhoto({required this.imageUrl});
+
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return _placeholder();
+        },
+        errorBuilder: (_, __, ___) => _error(),
+      );
+    }
+
+    return CachedNetworkImage(
+      imageUrl: imageUrl,
+      fit: BoxFit.cover,
+      errorWidget: (_, __, ___) => _error(),
+      placeholder: (_, __) => _placeholder(),
+    );
+  }
+
+  Widget _placeholder() {
+    return Container(
+      color: AppColors.surfaceVariant,
+      child: const Center(
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: AppColors.primary,
+        ),
+      ),
+    );
+  }
+
+  Widget _error() {
+    return Container(
+      color: AppColors.surfaceVariant,
+      child: const Icon(
+        Icons.image_rounded,
+        color: AppColors.textSecondary,
+      ),
+    );
+  }
+}
+
+// ── Taste profile ─────────────────────────────────────────────────────────────
+
+class _TasteProfile extends StatelessWidget {
+  const _TasteProfile({required this.prefs});
 
   final InferredPreferences prefs;
 
   @override
   Widget build(BuildContext context) {
-    final features = prefs.preferredFeatures;
-    if (features.isEmpty) return const SizedBox.shrink();
-
-    final labels = {
-      VenueFeature.kids: '👶 С детьми',
-      VenueFeature.christian: '✝️ Христианин',
-      VenueFeature.sport: '🏃 Спорт',
-      VenueFeature.romantic: '❤️ Романтика',
-      VenueFeature.outdoor: '🌿 На улице',
-      VenueFeature.alcohol: '🍺 Алкоголь',
-      VenueFeature.vegetarian: '🥗 Вегетарианец',
-      VenueFeature.quiet: '🤫 Тишина',
-      VenueFeature.lively: '🎉 Движуха',
-      VenueFeature.cultural: '🎨 Культура',
-      VenueFeature.historical: '🏰 История',
-      VenueFeature.nature: '🌲 Природа',
+    const labels = {
+      VenueFeature.kids: 'С детьми',
+      VenueFeature.christian: 'Тихие места',
+      VenueFeature.sport: 'Активность',
+      VenueFeature.romantic: 'Романтика',
+      VenueFeature.outdoor: 'На воздухе',
+      VenueFeature.alcohol: 'Вечерний формат',
+      VenueFeature.vegetarian: 'Вег-опции',
+      VenueFeature.quiet: 'Тишина',
+      VenueFeature.lively: 'Живая атмосфера',
+      VenueFeature.cultural: 'Культура',
+      VenueFeature.historical: 'История',
+      VenueFeature.nature: 'Природа',
     };
 
+    final tags = prefs.preferredFeatures
+        .where(labels.containsKey)
+        .map((f) => labels[f]!)
+        .toList();
+
+    if (tags.isEmpty) return const SizedBox.shrink();
+
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.08)
+              : AppColors.softBorder,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Ваш профиль',
+          Text(
+            'Ваш вкус',
             style: TextStyle(
-              fontWeight: FontWeight.bold,
               fontSize: 15,
-              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w800,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: features
-                .where((f) => labels.containsKey(f))
-                .map((f) => Chip(
-                      label: Text(labels[f]!,
-                          style: const TextStyle(fontSize: 12)),
-                      backgroundColor:
-                          AppColors.primary.withOpacity(0.1),
-                      side: BorderSide.none,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                    ))
+            children: tags
+                .map(
+                  (t) => Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : AppColors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      t,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                )
                 .toList(),
           ),
         ],
@@ -386,3 +468,54 @@ class _PreferencesSummary extends StatelessWidget {
     );
   }
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+class _TopBtn extends StatelessWidget {
+  const _TopBtn({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : AppColors.softBorder,
+          ),
+        ),
+        child: Icon(
+          icon,
+          color: Theme.of(context).colorScheme.onSurface,
+          size: 20,
+        ),
+      ),
+    );
+  }
+}
+
+Widget _tag(String label, Color bg, Color fg) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: fg,
+        ),
+      ),
+    );
