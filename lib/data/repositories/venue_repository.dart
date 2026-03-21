@@ -72,7 +72,15 @@ class VenueRepository {
     try {
       final snap = await _firestore.collection('venues').get();
       if (snap.docs.isNotEmpty) {
-        _cache = List.unmodifiable(snap.docs.map(Venue.fromFirestore).toList());
+        _cache = List.unmodifiable(
+          snap.docs
+              .where((doc) {
+                final d = doc.data() as Map<String, dynamic>;
+                return d['name'] != null && d['description'] != null;
+              })
+              .map(Venue.fromFirestore)
+              .toList(),
+        );
         _log.i('Loaded ${_cache.length} venues from Firestore.');
       }
     } catch (e) {

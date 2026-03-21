@@ -44,12 +44,13 @@ class VenueCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(32),
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final cardH = constraints.maxHeight.isFinite ? constraints.maxHeight : 600.0;
             final p = detailsProgress.clamp(0.0, 1.0);
             final compactP = compactProgress.clamp(0.0, 1.0);
             final ep = Curves.easeOutCubic.transform(p);
             final offsetY = detailsExtent * p;
             final previewH =
-                lerpDouble((constraints.maxHeight * 0.27).clamp(148.0, 182.0), 96.0, compactP)!;
+                lerpDouble((cardH * 0.27).clamp(148.0, 182.0), 96.0, compactP)!;
             final parallax = detailsExtent * p * 0.22;
             final photoBottom = previewH - lerpDouble(22, 6, ep)!;
 
@@ -64,11 +65,11 @@ class VenueCard extends StatelessWidget {
                     left: 0,
                     right: 0,
                     top: -offsetY,
-                    height: constraints.maxHeight + detailsExtent,
+                    height: cardH + detailsExtent,
                     child: Column(
                       children: [
                         SizedBox(
-                          height: constraints.maxHeight,
+                          height: cardH,
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
