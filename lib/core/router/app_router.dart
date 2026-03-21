@@ -13,6 +13,8 @@ import '../../features/profile/screens/assistant_chat_screen.dart';
 import '../../features/session_mode/screens/session_mode_screen.dart';
 import '../../features/swipe_session/screens/swipe_session_screen.dart';
 import '../../features/recommendation/screens/recommendation_screen.dart';
+import '../../features/my_venue/screens/add_venue_screen.dart';
+import '../../features/my_venue/screens/my_venue_screen.dart';
 import '../../data/models/swipe_session.dart';
 import '../../shared/providers/providers.dart';
 
@@ -72,6 +74,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/result',
         builder: (_, __) => const RecommendationScreen(),
+      ),
+      GoRoute(
+        path: '/add-venue',
+        builder: (_, __) => const AddVenueScreen(),
+      ),
+      GoRoute(
+        path: '/my-venue',
+        builder: (_, state) => MyVenueScreen(venueId: state.extra as String?),
       ),
     ],
   );
