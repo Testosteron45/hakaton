@@ -3,6 +3,7 @@ import 'dart:ui' show lerpDouble;
 import 'package:flutter/foundation.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../../core/constants/venue_assets.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/venue.dart';
 
@@ -76,7 +77,10 @@ class VenueCard extends StatelessWidget {
                                   child: Stack(
                                     fit: StackFit.expand,
                                     children: [
-                                      _VenuePhoto(imageUrl: venue.photoUrl),
+                                      _VenuePhoto(
+                                        venueId: venue.id,
+                                        imageUrl: venue.photoUrl,
+                                      ),
                                       // top vignette
                                       const DecoratedBox(
                                         decoration: BoxDecoration(
@@ -166,12 +170,22 @@ class VenueCard extends StatelessWidget {
 // ── Photo ─────────────────────────────────────────────────────────────────────
 
 class _VenuePhoto extends StatelessWidget {
-  const _VenuePhoto({required this.imageUrl});
+  const _VenuePhoto({required this.venueId, required this.imageUrl});
 
+  final String venueId;
   final String imageUrl;
 
   @override
   Widget build(BuildContext context) {
+    final assetPath = kVenueAssets[venueId];
+    if (assetPath != null) {
+      return Image.asset(
+        assetPath,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _error(),
+      );
+    }
+
     if (kIsWeb) {
       return Image.network(
         imageUrl,
