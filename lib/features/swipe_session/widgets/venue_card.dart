@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/venue_assets.dart';
 import '../../../data/models/venue.dart';
 
 class VenueCard extends StatelessWidget {
@@ -26,7 +27,7 @@ class VenueCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             // Photo
-            _VenuePhoto(imageUrl: venue.photoUrl),
+            _VenuePhoto(venueId: venue.id, imageUrl: venue.photoUrl),
 
             // Gradient — soft, only at bottom
             const DecoratedBox(
@@ -110,12 +111,21 @@ class VenueCard extends StatelessWidget {
 }
 
 class _VenuePhoto extends StatelessWidget {
-  const _VenuePhoto({required this.imageUrl});
+  const _VenuePhoto({required this.venueId, required this.imageUrl});
 
+  final String venueId;
   final String imageUrl;
 
   @override
   Widget build(BuildContext context) {
+    final assetPath = kVenueAssets[venueId];
+    if (assetPath != null) {
+      return Image.asset(
+        assetPath,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _error(),
+      );
+    }
     return Image.network(
       imageUrl,
       fit: BoxFit.cover,
