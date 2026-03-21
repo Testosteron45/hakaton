@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/venue_assets.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/models/venue.dart';
 import '../../../shared/providers/providers.dart';
+import '../../swipe_session/providers/swipe_session_provider.dart';
 import '../widgets/kazak_assistant_card.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -15,6 +17,24 @@ class ProfileScreen extends ConsumerWidget {
     final user = ref.watch(authStateProvider).valueOrNull;
     final profileAsync = ref.watch(userProfileProvider);
     final venues = ref.watch(venueRepositoryProvider).getAll();
+    final swipeSession = ref.watch(swipeSessionProvider);
+    final lastCompletedLikedIds = ref.watch(lastCompletedLikedVenueIdsProvider);
+    final venuesById = {
+      for (final venue in venues) venue.id: venue,
+    };
+    final activeLikedIds = [
+      for (final entry
+          in swipeSession?.swipes.entries.toList().reversed ??
+              const <MapEntry<String, bool>>[])
+        if (entry.value) entry.key,
+    ];
+    final sourceLikedIds = activeLikedIds.isNotEmpty
+        ? activeLikedIds
+        : lastCompletedLikedIds.reversed.toList();
+    final likedVenues = [
+      for (final venueId in sourceLikedIds)
+        if (venuesById.containsKey(venueId)) venuesById[venueId]!,
+    ].take(3).toList();
 
     final profile = profileAsync.valueOrNull;
     final insights = _ProfileInsights.from(
@@ -28,165 +48,155 @@ class ProfileScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                child: Row(
-                  children: [
-                    _TopButton(
-                      icon: Icons.arrow_back_rounded,
-                      onTap: () => context.pop(),
-                    ),
-                    const SizedBox(width: 14),
-                    const Expanded(
-                      child: Text(
-                        'Профиль',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final maxWidth = constraints.maxWidth >= 980 ? 760.0 : 680.0;
+            return Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxWidth),
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                        child: Row(
+                          children: [
+                            _TopButton(
+                              icon: Icons.arrow_back_rounded,
+                              onTap: () => context.pop(),
+                            ),
+                            const SizedBox(width: 14),
+                            const Expanded(
+                              child: Text(
+                                'Профиль',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const _ThemeToggleButton(),
+                            const SizedBox(width: 10),
+                            _TopButton(
+                              icon: Icons.logout_rounded,
+                              onTap: () async {
+                                await ref.read(authProvider).signOut();
+                                if (context.mounted) context.go('/auth');
+                              },
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    const _ThemeToggleButton(),
-                    const SizedBox(width: 10),
-                    _TopButton(
-                      icon: Icons.logout_rounded,
-                      onTap: () async {
-                        await ref.read(authProvider).signOut();
-                        if (context.mounted) context.go('/auth');
-                      },
+                    const SliverToBoxAdapter(child: SizedBox(height: 18)),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _ProfileHero(insights: insights),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        child: KazakAssistantCard(),
+                      ),
+                    ),
+                    if (profileAsync.isLoading) ...[
+                      const SliverToBoxAdapter(child: SizedBox(height: 14)),
+                      const SliverToBoxAdapter(
+                        child: Center(
+                          child: CircularProgressIndicator(color: AppColors.primary),
+                        ),
+                      ),
+                    ],
+                    const SliverToBoxAdapter(child: SizedBox(height: 22)),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _SectionTitle(
+                          title: 'Твоя статистика',
+                          subtitle:
+                              'Коротко и по делу о том, что тебе реально подходит.',
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      sliver: SliverGrid(
+                        delegate: SliverChildListDelegate.fixed([
+                          _StatCard(
+                            label: 'Дней в приложении',
+                            value: '${insights.daysInApp}',
+                            icon: Icons.timelapse_rounded,
+                            accent: AppColors.primary,
+                          ),
+                          _StatCard(
+                            label: 'Мест под твой вайб',
+                            value: '${insights.matchedCount}',
+                            icon: Icons.auto_awesome_rounded,
+                            accent: AppColors.secondary,
+                          ),
+                          _StatCard(
+                            label: 'Рядом с тобой',
+                            value: '${insights.nearbyCount}',
+                            icon: Icons.near_me_rounded,
+                            accent: AppColors.accent,
+                          ),
+                          _StatCard(
+                            label: 'Любимых форматов',
+                            value: '${insights.typeCount}',
+                            icon: Icons.grid_view_rounded,
+                            accent: AppColors.success,
+                          ),
+                        ]),
+                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 220,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          mainAxisExtent: 108,
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 22)),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _SectionTitle(
+                          title: 'Портрет вкуса',
+                          subtitle: insights.vibeSubtitle,
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _TasteCard(
+                          insights: insights,
+                          likedVenues: likedVenues,
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                        child: OutlinedButton.icon(
+                          onPressed: () => context.push('/onboarding'),
+                          icon: const Icon(Icons.tune_rounded),
+                          label: const Text('Перенастроить интересы'),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 18)),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _ProfileHero(insights: insights),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: KazakAssistantCard(),
-              ),
-            ),
-            if (profileAsync.isLoading) ...[
-              const SliverToBoxAdapter(child: SizedBox(height: 14)),
-              const SliverToBoxAdapter(
-                child: Center(
-                  child: CircularProgressIndicator(color: AppColors.primary),
-                ),
-              ),
-            ],
-            const SliverToBoxAdapter(child: SizedBox(height: 22)),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _SectionTitle(
-                  title: 'Твоя статистика',
-                  subtitle:
-                      'Коротко и по делу о том, что тебе реально подходит.',
-                ),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverGrid(
-                delegate: SliverChildListDelegate.fixed([
-                  _StatCard(
-                    label: 'Дней в приложении',
-                    value: '${insights.daysInApp}',
-                    icon: Icons.timelapse_rounded,
-                    accent: AppColors.primary,
-                  ),
-                  _StatCard(
-                    label: 'Мест под твой вайб',
-                    value: '${insights.matchedCount}',
-                    icon: Icons.auto_awesome_rounded,
-                    accent: AppColors.secondary,
-                  ),
-                  _StatCard(
-                    label: 'Рядом с тобой',
-                    value: '${insights.nearbyCount}',
-                    icon: Icons.near_me_rounded,
-                    accent: AppColors.accent,
-                  ),
-                  _StatCard(
-                    label: 'Любимых форматов',
-                    value: '${insights.typeCount}',
-                    icon: Icons.grid_view_rounded,
-                    accent: AppColors.success,
-                  ),
-                ]),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.16,
-                ),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 22)),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _SectionTitle(
-                  title: 'Портрет вкуса',
-                  subtitle: insights.vibeSubtitle,
-                ),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _TasteCard(insights: insights),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 22)),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _SectionTitle(
-                  title: 'Что зайдет прямо сейчас',
-                  subtitle: 'Небольшая выжимка по твоим лучшим сценариям.',
-                ),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate.fixed([
-                  for (final item in insights.highlights)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _HighlightCard(item: item),
-                    ),
-                ]),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 8)),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-                child: OutlinedButton.icon(
-                  onPressed: () => context.push('/onboarding'),
-                  icon: const Icon(Icons.tune_rounded),
-                  label: const Text('Перенастроить интересы'),
-                ),
-              ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -200,91 +210,124 @@ class _ProfileHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.primaryDark,
-            AppColors.primary,
-            AppColors.secondary
-          ],
-        ),
-        borderRadius: BorderRadius.circular(30),
+    return Tooltip(
+      message: '${insights.vibeTitle}\n\n${insights.vibeDescription}',
+      waitDuration: const Duration(milliseconds: 350),
+      preferBelow: false,
+      constraints: const BoxConstraints(maxWidth: 260),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      textStyle: const TextStyle(
+        fontSize: 12,
+        height: 1.4,
+        color: Colors.white,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.18),
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  insights.initials,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      insights.userName,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      insights.email,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.white.withValues(alpha: 0.8),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C2538),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.primaryDark,
+              AppColors.primary,
+              AppColors.secondary
             ],
           ),
-          const SizedBox(height: 22),
-          Text(
-            insights.vibeTitle,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              height: 1.05,
+          borderRadius: BorderRadius.circular(26),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    insights.initials,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        insights.userName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        insights.email,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.info_outline_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            insights.vibeDescription,
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.5,
-              color: Colors.white.withValues(alpha: 0.84),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _HeroBadge(
+                  icon: Icons.auto_awesome_rounded,
+                  label: insights.vibeTitle,
+                ),
+                _HeroBadge(
+                  icon: Icons.timelapse_rounded,
+                  label: '${insights.daysInApp} дн. с нами',
+                ),
+                _HeroBadge(
+                  icon: Icons.touch_app_rounded,
+                  label: 'Наведи для деталей',
+                ),
+              ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -307,10 +350,10 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isDark
               ? Colors.white.withValues(alpha: 0.08)
@@ -320,31 +363,73 @@ class _StatCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: accent, size: 20),
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: accent, size: 18),
+              ),
+              const Spacer(),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ],
           ),
-          const Spacer(),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
           Text(
             label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 12,
               color: Theme.of(context).textTheme.bodyMedium?.color,
-              height: 1.35,
+              height: 1.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroBadge extends StatelessWidget {
+  const _HeroBadge({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.14),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.white),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
             ),
           ),
         ],
@@ -354,9 +439,13 @@ class _StatCard extends StatelessWidget {
 }
 
 class _TasteCard extends StatelessWidget {
-  const _TasteCard({required this.insights});
+  const _TasteCard({
+    required this.insights,
+    required this.likedVenues,
+  });
 
   final _ProfileInsights insights;
+  final List<Venue> likedVenues;
 
   @override
   Widget build(BuildContext context) {
@@ -417,6 +506,37 @@ class _TasteCard extends StatelessWidget {
               ),
             ),
           ),
+          if (likedVenues.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(
+              'Последние лайки',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 10),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final itemWidth = ((constraints.maxWidth - 16) / 3).clamp(
+                  140.0,
+                  180.0,
+                );
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final venue in likedVenues)
+                      SizedBox(
+                        width: itemWidth,
+                        child: _LikedVenueMiniCard(venue: venue),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ],
         ],
       ),
     );
@@ -464,55 +584,114 @@ class _ProfileChip extends StatelessWidget {
   }
 }
 
-class _HighlightCard extends StatelessWidget {
-  const _HighlightCard({required this.item});
+class _LikedVenueMiniCard extends StatelessWidget {
+  const _LikedVenueMiniCard({required this.venue});
 
-  final _ProfileHighlight item;
+  final Venue venue;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(24),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : AppColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : AppColors.softBorder,
+              ? Colors.white.withValues(alpha: 0.06)
+              : AppColors.softBorder.withValues(alpha: 0.7),
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: item.accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(item.icon, color: item.accent),
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(18),
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 82,
+                  child: _LikedVenuePhoto(venue: venue),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.38),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.favorite_rounded,
+                    size: 15,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 14),
-          Expanded(
+          Padding(
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: Icon(
+                        _typeIcon(venue.type),
+                        size: 14,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _typeLabelSingle(venue.type),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
                 Text(
-                  item.title,
+                  venue.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 13,
                     fontWeight: FontWeight.w800,
+                    height: 1.2,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Text(
-                  item.subtitle,
+                  _distanceShortLabel(venue.distance),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 13,
-                    height: 1.45,
+                    fontSize: 11.5,
                     color: Theme.of(context).textTheme.bodyMedium?.color,
                   ),
                 ),
@@ -523,6 +702,58 @@ class _HighlightCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _LikedVenuePhoto extends StatelessWidget {
+  const _LikedVenuePhoto({required this.venue});
+
+  final Venue venue;
+
+  @override
+  Widget build(BuildContext context) {
+    final assetPath = kVenueAssets[venue.id];
+    if (assetPath != null) {
+      return Image.asset(
+        assetPath,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _fallback(),
+      );
+    }
+
+    return Image.network(
+      venue.photoUrl,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return _placeholder();
+      },
+      errorBuilder: (_, __, ___) => _fallback(),
+    );
+  }
+
+  Widget _placeholder() => Container(
+        color: AppColors.surfaceVariant,
+        child: const Center(
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      );
+
+  Widget _fallback() => Container(
+        color: AppColors.surfaceVariant,
+        alignment: Alignment.center,
+        child: const Icon(
+          Icons.image_rounded,
+          color: AppColors.textSecondary,
+          size: 22,
+        ),
+      );
 }
 
 class _SectionTitle extends StatelessWidget {
@@ -707,7 +938,6 @@ class _ProfileInsights {
     required this.vibeSubtitle,
     required this.vibeDescription,
     required this.matchSummary,
-    required this.highlights,
   });
 
   final String userName;
@@ -724,7 +954,6 @@ class _ProfileInsights {
   final String vibeSubtitle;
   final String vibeDescription;
   final String matchSummary;
-  final List<_ProfileHighlight> highlights;
 
   factory _ProfileInsights.from({
     required String userName,
@@ -803,32 +1032,6 @@ class _ProfileInsights {
         'Сейчас для тебя доступно $matchedCount мест, из них $nearbyCount находятся рядом. '
         'Лучше всего система видит сценарии в формате: $formatsLabel.';
 
-    final highlights = [
-      _ProfileHighlight(
-        title: 'Лучший сценарий',
-        subtitle:
-            '${group == null ? 'Универсальный формат' : _groupLabel(group)} + ${typeLabels.isEmpty ? 'новые места' : typeLabels.first.$2.toLowerCase()}',
-        icon: Icons.bolt_rounded,
-        accent: AppColors.primary,
-      ),
-      _ProfileHighlight(
-        title: 'Быстрый выход',
-        subtitle: nearbyCount == 0
-            ? 'Нужно расширить вкус, чтобы видеть больше мест рядом.'
-            : '$nearbyCount вариантов можно рассмотреть без долгой дороги.',
-        icon: Icons.route_rounded,
-        accent: AppColors.accent,
-      ),
-      _ProfileHighlight(
-        title: 'Атмосфера',
-        subtitle: featureLabels.isEmpty
-            ? 'Пока мало сигналов, но профиль уже можно усиливать новыми свайпами.'
-            : 'Твой профиль чаще всего тянется к атмосфере: ${featureLabels.join(', ').toLowerCase()}.',
-        icon: Icons.nightlife_rounded,
-        accent: AppColors.secondary,
-      ),
-    ];
-
     return _ProfileInsights(
       userName: userName,
       email: email,
@@ -844,23 +1047,8 @@ class _ProfileInsights {
       vibeSubtitle: vibeSubtitle,
       vibeDescription: vibeDescription,
       matchSummary: matchSummary,
-      highlights: highlights,
     );
   }
-}
-
-class _ProfileHighlight {
-  const _ProfileHighlight({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.accent,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color accent;
 }
 
 String _vibeTitle(List<VenueType> types, GroupTag? group) {
@@ -917,6 +1105,27 @@ String _typeLabel(VenueType type) => switch (type) {
       VenueType.embankment => 'Прогулки',
       VenueType.mall => 'Шопинг',
       VenueType.theater => 'Театры',
+    };
+
+String _typeLabelSingle(VenueType type) => switch (type) {
+      VenueType.restaurant => 'Ресторан',
+      VenueType.cafe => 'Кафе',
+      VenueType.park => 'Парк',
+      VenueType.museum => 'Музей',
+      VenueType.temple => 'Храм',
+      VenueType.bar => 'Бар',
+      VenueType.spa => 'Спа',
+      VenueType.sport => 'Спорт',
+      VenueType.attraction => 'Развлечения',
+      VenueType.embankment => 'Прогулка',
+      VenueType.mall => 'Шопинг',
+      VenueType.theater => 'Театр',
+    };
+
+String _distanceShortLabel(DistanceTag distance) => switch (distance) {
+      DistanceTag.near => 'Рядом',
+      DistanceTag.medium => 'До 30 мин',
+      DistanceTag.far => 'Подальше',
     };
 
 String? _featureLabel(VenueFeature feature) => switch (feature) {

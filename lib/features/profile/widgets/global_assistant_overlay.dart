@@ -2,14 +2,18 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import '../../../core/constants/app_colors.dart';
 import '../providers/assistant_provider.dart';
 import 'kazak_assistant_view.dart';
 
 class GlobalAssistantOverlay extends ConsumerStatefulWidget {
-  const GlobalAssistantOverlay({super.key});
+  const GlobalAssistantOverlay({
+    super.key,
+    required this.onOpenChat,
+  });
+
+  final VoidCallback onOpenChat;
 
   @override
   ConsumerState<GlobalAssistantOverlay> createState() =>
@@ -20,6 +24,7 @@ class _GlobalAssistantOverlayState
     extends ConsumerState<GlobalAssistantOverlay> {
   bool _expanded = false;
   Offset? _position;
+  double _sizeScale = 1.0;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +36,8 @@ class _GlobalAssistantOverlayState
     return SafeArea(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final modelSize = _expanded ? 128.0 : 108.0;
+          final baseModelSize = _expanded ? 128.0 : 108.0;
+          final modelSize = (baseModelSize * _sizeScale).clamp(92.0, 172.0);
           final viewport = constraints.biggest;
           final position = _clampPosition(
             _position ??
@@ -81,6 +87,43 @@ class _GlobalAssistantOverlayState
               ),
               if (_expanded)
                 Positioned(
+                  left: math.min(
+                    math.max(8.0, viewport.width - 38),
+                    position.dx + modelSize + 8,
+                  ),
+                  top: math.max(8, position.dy + 6),
+                  child: PointerInterceptor(
+                    child: Column(
+                      children: [
+                        _AssistantScaleButton(
+                          icon: Icons.add_rounded,
+                          onTap: () => setState(() {
+                            _sizeScale = (_sizeScale + 0.12).clamp(0.85, 1.35);
+                            _position = _clampPosition(
+                              position,
+                              viewport,
+                              (baseModelSize * _sizeScale).clamp(92.0, 172.0),
+                            );
+                          }),
+                        ),
+                        const SizedBox(height: 8),
+                        _AssistantScaleButton(
+                          icon: Icons.remove_rounded,
+                          onTap: () => setState(() {
+                            _sizeScale = (_sizeScale - 0.12).clamp(0.85, 1.35);
+                            _position = _clampPosition(
+                              position,
+                              viewport,
+                              (baseModelSize * _sizeScale).clamp(92.0, 172.0),
+                            );
+                          }),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              if (_expanded)
+                Positioned(
                   left: math.max(8, position.dx - 6),
                   top: math.min(
                     math.max(8.0, viewport.height - 52),
@@ -91,7 +134,7 @@ class _GlobalAssistantOverlayState
                       label: 'Поболтать с ботом',
                       onTap: () {
                         setState(() => _expanded = false);
-                        context.push('/assistant-chat');
+                        widget.onOpenChat();
                       },
                     ),
                   ),
@@ -125,6 +168,55 @@ class _GlobalAssistantOverlayState
     return Offset(
       position.dx.clamp(padding, math.max(padding, viewport.width - size - padding)),
       position.dy.clamp(padding, math.max(padding, viewport.height - size - padding)),
+    );
+  }
+}
+
+class _AssistantScaleButton extends StatelessWidget {
+  const _AssistantScaleButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Ink(
+          width: 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: isDark
+                ? AppColors.surfaceDark.withValues(alpha: 0.96)
+                : Colors.white.withValues(alpha: 0.97),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : AppColors.softBorder,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Icon(
+            icon,
+            size: 16,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+      ),
     );
   }
 }

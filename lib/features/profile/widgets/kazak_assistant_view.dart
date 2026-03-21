@@ -191,6 +191,11 @@ class _Real3DModel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final shouldAutoRotate =
+        enableInteraction &&
+        (mood == KazakAssistantMood.dance ||
+            mood == KazakAssistantMood.celebrate);
+
     return IgnorePointer(
       ignoring: !enableInteraction,
       child: ModelViewer(
@@ -200,7 +205,7 @@ class _Real3DModel extends StatelessWidget {
         cameraControls: enableInteraction,
         disableZoom: !enableInteraction,
         disablePan: !enableInteraction,
-        autoRotate: mood != KazakAssistantMood.hint,
+        autoRotate: shouldAutoRotate,
         autoRotateDelay: 0,
         rotationPerSecond: _rotationPerSecond(mood),
         cameraOrbit: _cameraOrbit(mood),

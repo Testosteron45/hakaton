@@ -223,6 +223,7 @@ class _GroupPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final options = [
       (GroupTag.solo, '🧍', 'Один(а)'),
       (GroupTag.couple, '👫', 'Вдвоём'),
@@ -233,91 +234,101 @@ class _GroupPage extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.all(24),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'С кем планируете?',
-              style: textTheme.headlineMedium?.copyWith(fontSize: 30),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Это поможет нам подобрать подходящие места',
-              style: textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 28),
-            ...options.map((o) {
-              final (tag, emoji, label) = o;
-              final isSelected = selected == tag;
-              final isDark = Theme.of(context).brightness == Brightness.dark;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: GestureDetector(
-                  onTap: () => onChanged(tag),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 18, vertical: 18),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.primary.withValues(alpha: 0.08)
-                          : (isDark
-                              ? Colors.white.withValues(alpha: 0.05)
-                              : AppColors.surfaceVariant),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: isSelected
-                            ? AppColors.primary
-                            : (isDark
-                                ? Colors.white.withValues(alpha: 0.08)
-                                : AppColors.softBorder),
-                        width: isSelected ? 2 : 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'С кем планируете?',
+                  style: textTheme.headlineMedium?.copyWith(fontSize: 30),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Это поможет нам подобрать подходящие места',
+                  style: textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 24),
+                ...options.map((o) {
+                  final (tag, emoji, label) = o;
+                  final isSelected = selected == tag;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: GestureDetector(
+                      onTap: () => onChanged(tag),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary.withValues(alpha: 0.08)
+                              : (isDark
+                                  ? Colors.white.withValues(alpha: 0.05)
+                                  : AppColors.surfaceVariant),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
                             color: isSelected
-                                ? AppColors.primary.withValues(alpha: 0.12)
+                                ? AppColors.primary
                                 : (isDark
                                     ? Colors.white.withValues(alpha: 0.08)
-                                    : Colors.white),
-                            borderRadius: BorderRadius.circular(16),
+                                    : AppColors.softBorder),
+                            width: isSelected ? 2 : 1,
                           ),
-                          alignment: Alignment.center,
-                          child:
-                              Text(emoji, style: const TextStyle(fontSize: 24)),
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Text(
-                            label,
-                            style: textTheme.titleMedium?.copyWith(
-                              fontWeight: isSelected
-                                  ? FontWeight.w800
-                                  : FontWeight.w600,
-                              color: isSelected
-                                  ? AppColors.primary
-                                  : Theme.of(context).colorScheme.onSurface,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppColors.primary.withValues(alpha: 0.12)
+                                    : (isDark
+                                        ? Colors.white.withValues(alpha: 0.08)
+                                        : Colors.white),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                emoji,
+                                style: const TextStyle(fontSize: 21),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                label,
+                                style: textTheme.titleMedium?.copyWith(
+                                  fontWeight: isSelected
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : Theme.of(context).colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                            if (isSelected)
+                              const Icon(
+                                Icons.check_circle_rounded,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                          ],
                         ),
-                        if (isSelected)
-                          const Icon(
-                            Icons.check_circle_rounded,
-                            color: AppColors.primary,
-                          ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              );
-            }),
-          ],
+                  );
+                }),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -351,106 +362,118 @@ class _TypesPage extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Что вам интересно?',
-            style: textTheme.headlineMedium?.copyWith(fontSize: 30),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Выберите одно или несколько',
-            style: textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 14,
-                childAspectRatio: 1.04,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Что вам интересно?',
+                style: textTheme.headlineMedium?.copyWith(fontSize: 30),
               ),
-              itemCount: options.length,
-              itemBuilder: (_, i) {
-                final (type, emoji, label) = options[i];
-                final isSelected = selected.contains(type);
-                return GestureDetector(
-                  onTap: () => onToggle(type),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.primary
-                          : (isDark
-                              ? Colors.white.withValues(alpha: 0.05)
-                              : AppColors.surfaceVariant),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: isSelected
-                            ? AppColors.primary
-                            : (isDark
-                                ? Colors.white.withValues(alpha: 0.08)
-                                : AppColors.softBorder),
+              const SizedBox(height: 8),
+              Text(
+                'Выберите одно или несколько',
+                style: textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: GridView.builder(
+                  gridDelegate:
+                      const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 180,
+                        mainAxisSpacing: 10,
+                        crossAxisSpacing: 10,
+                        mainAxisExtent: 132,
                       ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
+                  itemCount: options.length,
+                  itemBuilder: (_, i) {
+                    final (type, emoji, label) = options[i];
+                    final isSelected = selected.contains(type);
+                    return GestureDetector(
+                      onTap: () => onToggle(type),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary
+                              : (isDark
+                                  ? Colors.white.withValues(alpha: 0.05)
+                                  : AppColors.surfaceVariant),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
                             color: isSelected
-                                ? Colors.white.withValues(alpha: 0.16)
+                                ? AppColors.primary
                                 : (isDark
                                     ? Colors.white.withValues(alpha: 0.08)
-                                    : Colors.white),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            emoji,
-                            style: const TextStyle(fontSize: 20),
+                                    : AppColors.softBorder),
                           ),
                         ),
-                        const Spacer(),
-                        Text(
-                          label,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.titleMedium?.copyWith(
-                            color: isSelected
-                                ? Colors.white
-                                : Theme.of(context).colorScheme.onSurface,
-                            fontWeight:
-                                isSelected ? FontWeight.w800 : FontWeight.w700,
-                            height: 1.1,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? Colors.white.withValues(alpha: 0.16)
+                                    : (isDark
+                                        ? Colors.white.withValues(alpha: 0.08)
+                                        : Colors.white),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                emoji,
+                                style: const TextStyle(fontSize: 18),
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              label,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: textTheme.titleMedium?.copyWith(
+                                color: isSelected
+                                    ? Colors.white
+                                    : Theme.of(context).colorScheme.onSurface,
+                                fontWeight: isSelected
+                                    ? FontWeight.w800
+                                    : FontWeight.w700,
+                                fontSize: 15,
+                                height: 1.1,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              isSelected ? 'Выбрано' : 'Нажми, чтобы выбрать',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: isSelected
+                                    ? Colors.white.withValues(alpha: 0.8)
+                                    : Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.color,
+                                fontSize: 11.5,
+                                height: 1.1,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          isSelected ? 'Выбрано' : 'Нажми, чтобы выбрать',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: isSelected
-                                ? Colors.white.withValues(alpha: 0.8)
-                                : Theme.of(context).textTheme.bodyMedium?.color,
-                            fontSize: 12,
-                            height: 1.1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

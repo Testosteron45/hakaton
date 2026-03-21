@@ -81,7 +81,10 @@ class AppViewport extends StatelessWidget {
         return Stack(
           children: [
             child,
-            if (showAssistant) const GlobalAssistantOverlay(),
+            if (showAssistant)
+              GlobalAssistantOverlay(
+                onOpenChat: () => router.push('/assistant-chat'),
+              ),
           ],
         );
       },

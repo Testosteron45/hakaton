@@ -1,5 +1,6 @@
 import 'package:appinio_swiper/appinio_swiper.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
@@ -17,9 +18,11 @@ class SwipeSessionScreen extends ConsumerStatefulWidget {
 }
 
 class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AppinioSwiperController _controller;
   late final AnimationController _detailsController;
+  late final AnimationController _compactController;
+  final FocusNode _keyboardFocusNode = FocusNode();
   bool _initialized = false;
 
   @override
@@ -27,6 +30,7 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen>
     super.initState();
     _controller = AppinioSwiperController();
     _detailsController = AnimationController(vsync: this);
+    _compactController = AnimationController(vsync: this);
   }
 
   @override
@@ -42,6 +46,8 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen>
 
   @override
   void dispose() {
+    _keyboardFocusNode.dispose();
+    _compactController.dispose();
     _detailsController.dispose();
     _controller.dispose();
     super.dispose();
@@ -73,20 +79,77 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen>
     );
   }
 
+  void _restoreCardBody() {
+    _compactController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _compactCardBody() {
+    _compactController.animateTo(
+      1,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   void _swipeLeft() {
+    _restoreCardBody();
     _closeDetails();
     _controller.swipeLeft();
   }
 
   void _swipeRight() {
+    _restoreCardBody();
     _closeDetails();
     _controller.swipeRight();
+  }
+
+  void _openDetails() {
+    _restoreCardBody();
+    _detailsController.animateTo(
+      1.0,
+      duration: const Duration(milliseconds: 360),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  KeyEventResult _handleKeyEvent(KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+      _swipeLeft();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      _swipeRight();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      _openDetails();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      if (_detailsController.value > 0.05) {
+        _closeDetails();
+      } else {
+        _compactCardBody();
+      }
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
   }
 
   void _handleCardVerticalDragUpdate(
     DragUpdateDetails details,
     double revealExtent,
   ) {
+    if (_compactController.value > 0) {
+      _restoreCardBody();
+    }
     final next =
         _detailsController.value - (details.delta.dy / revealExtent);
     _detailsController.value = next.clamp(0.0, 1.0);
@@ -140,163 +203,190 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen>
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
       body: SafeArea(
-        child: Column(
-          children: [
-            // ── Header ────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-              child: Row(
-                children: [
-                  _CircleBtn(
-                    icon: Icons.explore_rounded,
-                    backgroundColor: AppColors.primary,
-                    iconColor: Colors.white,
-                    onTap: () => context.push('/map'),
-                  ),
-                  const SizedBox(width: 10),
-                  _CircleBtn(
-                    icon: Icons.arrow_back_rounded,
-                    onTap: () {
-                      ref.read(swipeSessionProvider.notifier).reset();
-                      context.pop();
-                    },
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.mode.label,
-                          style: const TextStyle(
-                            color: Colors.white54,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+        child: Focus(
+          autofocus: true,
+          focusNode: _keyboardFocusNode,
+          onKeyEvent: (_, event) => _handleKeyEvent(event),
+          child: LayoutBuilder(
+            builder: (context, viewport) {
+              final contentMaxWidth = viewport.maxWidth >= 1100 ? 620.0 : 560.0;
+              final stackMaxWidth = viewport.maxWidth >= 1100 ? 470.0 : 500.0;
+
+              return Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: contentMaxWidth),
+                  child: Column(
+                    children: [
+                    // ── Header ────────────────────────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                      child: Row(
+                        children: [
+                          _CircleBtn(
+                            icon: Icons.explore_rounded,
+                            backgroundColor: AppColors.primary,
+                            iconColor: Colors.white,
+                            onTap: () => context.push('/map'),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            minHeight: 6,
-                            backgroundColor:
-                                Colors.white.withValues(alpha: 0.1),
-                            color: AppColors.accent,
+                          const SizedBox(width: 10),
+                          _CircleBtn(
+                            icon: Icons.arrow_back_rounded,
+                            onTap: () {
+                              ref.read(swipeSessionProvider.notifier).reset();
+                              context.pop();
+                            },
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      '$remaining',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.mode.label,
+                                  style: const TextStyle(
+                                    color: Colors.white54,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(999),
+                                  child: LinearProgressIndicator(
+                                    value: progress,
+                                    minHeight: 6,
+                                    backgroundColor:
+                                        Colors.white.withValues(alpha: 0.1),
+                                    color: AppColors.accent,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Text(
+                              '$remaining',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
 
-            const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-            // ── Card stack ────────────────────────────────────────────────
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final revealExtent =
-                        (constraints.maxHeight * 0.45).clamp(240.0, 340.0);
+                    // ── Card stack ────────────────────────────────────────────────
+                    Expanded(
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: stackMaxWidth),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final revealExtent =
+                                    (constraints.maxHeight * 0.45).clamp(240.0, 340.0);
 
-                    return AnimatedBuilder(
-                      animation: _detailsController,
-                      builder: (context, _) => SizedBox(
-                        height: constraints.maxHeight,
-                        child: AppinioSwiper(
-                          controller: _controller,
-                          cardCount: session.queue.length,
-                          initialIndex: session.currentIndex,
-                          onSwipeEnd: _onSwipe,
-                          swipeOptions: const SwipeOptions.only(
-                            left: true,
-                            right: true,
+                                return AnimatedBuilder(
+                                  animation: Listenable.merge([
+                                    _detailsController,
+                                    _compactController,
+                                  ]),
+                                  builder: (context, _) => SizedBox(
+                                    height: constraints.maxHeight,
+                                    child: AppinioSwiper(
+                                      controller: _controller,
+                                      cardCount: session.queue.length,
+                                      initialIndex: session.currentIndex,
+                                      onSwipeEnd: _onSwipe,
+                                      swipeOptions: const SwipeOptions.only(
+                                        left: true,
+                                        right: true,
+                                      ),
+                                      backgroundCardScale: 0.95,
+                                      backgroundCardCount: 2,
+                                      cardBuilder: (context, index) {
+                                        if (index >= session.queue.length) {
+                                          return const SizedBox.shrink();
+                                        }
+                                        final isTopCard = index == session.currentIndex;
+                                        return VenueCard(
+                                          venue: session.queue[index],
+                                          detailsProgress:
+                                              isTopCard ? _detailsController.value : 0,
+                                          compactProgress:
+                                              isTopCard ? _compactController.value : 0,
+                                          detailsExtent: revealExtent,
+                                          onDetailsDragUpdate: isTopCard
+                                              ? (d) => _handleCardVerticalDragUpdate(
+                                                    d,
+                                                    revealExtent,
+                                                  )
+                                              : null,
+                                          onDetailsDragEnd: isTopCard
+                                              ? (d) => _handleCardVerticalDragEnd(
+                                                    d,
+                                                    revealExtent,
+                                                  )
+                                              : null,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                          backgroundCardScale: 0.95,
-                          backgroundCardCount: 2,
-                          cardBuilder: (context, index) {
-                            if (index >= session.queue.length) {
-                              return const SizedBox.shrink();
-                            }
-                            final isTopCard = index == session.currentIndex;
-                            return VenueCard(
-                              venue: session.queue[index],
-                              detailsProgress:
-                                  isTopCard ? _detailsController.value : 0,
-                              detailsExtent: revealExtent,
-                              onDetailsDragUpdate: isTopCard
-                                  ? (d) => _handleCardVerticalDragUpdate(
-                                        d,
-                                        revealExtent,
-                                      )
-                                  : null,
-                              onDetailsDragEnd: isTopCard
-                                  ? (d) => _handleCardVerticalDragEnd(
-                                        d,
-                                        revealExtent,
-                                      )
-                                  : null,
-                            );
-                          },
                         ),
                       ),
-                    );
-                  },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ── Action buttons ────────────────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _ActionBtn(
+                            icon: Icons.close_rounded,
+                            color: AppColors.error,
+                            onTap: _swipeLeft,
+                          ),
+                          const SizedBox(width: 24),
+                          _ActionBtn(
+                            icon: Icons.skip_next_rounded,
+                            color: Colors.white30,
+                            onTap: _swipeLeft,
+                          ),
+                          const SizedBox(width: 24),
+                          _ActionBtn(
+                            icon: Icons.favorite_rounded,
+                            color: AppColors.success,
+                            onTap: _swipeRight,
+                            large: true,
+                          ),
+                        ],
+                      ),
+                    ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // ── Action buttons ────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _ActionBtn(
-                    icon: Icons.close_rounded,
-                    color: AppColors.error,
-                    onTap: _swipeLeft,
-                  ),
-                  const SizedBox(width: 24),
-                  _ActionBtn(
-                    icon: Icons.favorite_rounded,
-                    color: AppColors.success,
-                    onTap: _swipeRight,
-                    large: true,
-                  ),
-                  const SizedBox(width: 24),
-                  _ActionBtn(
-                    icon: Icons.skip_next_rounded,
-                    color: Colors.white30,
-                    onTap: _swipeLeft,
-                  ),
-                ],
-              ),
-            ),
-          ],
+              );
+            },
+          ),
         ),
       ),
     );

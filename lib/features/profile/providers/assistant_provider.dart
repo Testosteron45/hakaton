@@ -153,18 +153,22 @@ class AssistantChatState {
   const AssistantChatState({
     this.messages = const [],
     this.isSending = false,
+    this.hasClarifiedIntent = false,
   });
 
   final List<AssistantChatMessage> messages;
   final bool isSending;
+  final bool hasClarifiedIntent;
 
   AssistantChatState copyWith({
     List<AssistantChatMessage>? messages,
     bool? isSending,
+    bool? hasClarifiedIntent,
   }) {
     return AssistantChatState(
       messages: messages ?? this.messages,
       isSending: isSending ?? this.isSending,
+      hasClarifiedIntent: hasClarifiedIntent ?? this.hasClarifiedIntent,
     );
   }
 }
@@ -182,22 +186,16 @@ class AssistantChatController extends StateNotifier<AssistantChatState> {
   final Ref ref;
 
   void _seedWelcome() {
-    final profile = ref.read(userProfileProvider).valueOrNull;
-    final venues = _effectiveVenues(
-      ref.read(venueRepositoryProvider).getAll(),
-      profile,
-    );
-
     state = state.copyWith(
       messages: [
         AssistantChatMessage(
           id: _messageId(),
           role: AssistantChatRole.bot,
           text:
-              'Привет. Я помогу собрать маршрут по Краснодару. Скажи, что тебе хочется: романтика, тихая прогулка, кафе, активный день или что-то семейное?',
-          recommendations: venues.take(3).toList(),
+              'Привет. Давай соберём маршрут под тебя. Что хочешь сегодня: спокойную прогулку, поесть, романтику, активность или формат с детьми?',
         ),
       ],
+      hasClarifiedIntent: false,
     );
   }
 
@@ -226,20 +224,22 @@ class AssistantChatController extends StateNotifier<AssistantChatState> {
       final groq = ref.read(groqServiceProvider);
       final configured = ref.read(groqConfiguredProvider);
       final profile = ref.read(userProfileProvider).valueOrNull;
-      final venues = _effectiveVenues(
-        ref.read(venueRepositoryProvider).getAll(),
-        profile,
-      );
-      final recommended = _recommendVenuesForQuery(
-        venues: venues,
-        query: text,
-        profile: profile,
-      );
+      final venues = ref.read(venueRepositoryProvider).getAll();
+      final shouldClarifyFirst = !state.hasClarifiedIntent;
+      final recommended = shouldClarifyFirst
+          ? const <Venue>[]
+          : _recommendVenuesForQuery(
+              venues: venues,
+              query: text,
+              profile: profile,
+            );
 
       String botText;
-      if (!configured) {
+      if (shouldClarifyFirst) {
+        botText = _buildClarifyingResponse(text, profile);
+      } else if (!configured) {
         botText =
-            'Нейро не настроен, но я уже вижу подходящие варианты ниже. Напиши, например: "хочу романтичный вечер" или "маршрут на полдня".';
+            'Понял, собрал маршрут карточками ниже. Если хочешь, уточни район, бюджет или темп вечера, и я перестрою план.';
       } else {
         final prompt = _buildAssistantChatPrompt(
           query: text,
@@ -266,6 +266,7 @@ class AssistantChatController extends StateNotifier<AssistantChatState> {
       final messages = [...state.messages]..removeWhere((m) => m.isLoading);
       state = state.copyWith(
         isSending: false,
+        hasClarifiedIntent: true,
         messages: [...messages, response],
       );
     } catch (e) {
@@ -283,6 +284,21 @@ class AssistantChatController extends StateNotifier<AssistantChatState> {
         ],
       );
     }
+  }
+
+  void appendBotMessage(String text) {
+    final cleaned = text.trim();
+    if (cleaned.isEmpty) return;
+    state = state.copyWith(
+      messages: [
+        ...state.messages,
+        AssistantChatMessage(
+          id: _messageId(),
+          role: AssistantChatRole.bot,
+          text: cleaned,
+        ),
+      ],
+    );
   }
 }
 
@@ -515,6 +531,8 @@ List<Venue> _recommendVenuesForQuery({
   required UserProfile? profile,
 }) {
   if (venues.isEmpty) return const [];
+  final queryLower = query.toLowerCase();
+  final asksForKrasnaya = RegExp(r'(^|\s)(ул\.?\s*)?красн').hasMatch(queryLower);
 
   final tokens = query
       .toLowerCase()
@@ -527,7 +545,6 @@ List<Venue> _recommendVenuesForQuery({
     final haystack = [
       venue.name,
       venue.description,
-      venue.address,
       venue.category,
       ...venue.tags,
       _typeLabel(venue.type),
@@ -539,9 +556,21 @@ List<Venue> _recommendVenuesForQuery({
       if (haystack.contains(token)) score += 3;
     }
 
+    if (tokens.any((t) => t.contains('мор') || t.contains('вод') || t.contains('пляж'))) {
+      if (venue.type == VenueType.embankment) score += 8;
+      if (venue.features.contains(VenueFeature.outdoor) ||
+          venue.features.contains(VenueFeature.nature)) {
+        score += 4;
+      }
+    }
+
     if (profile?.preferredTypes.contains(venue.type) ?? false) score += 3;
     if (profile?.defaultGroup == venue.group) score += 2;
-    if (venue.distance == DistanceTag.near) score += 1;
+    if (venue.distance == DistanceTag.near) score += 2;
+    if (venue.distance == DistanceTag.medium) score += 1;
+    if (!asksForKrasnaya && _isKrasnayaStreet(venue.address)) {
+      score -= 3;
+    }
 
     return score;
   }
@@ -553,7 +582,10 @@ List<Venue> _recommendVenuesForQuery({
       return a.name.compareTo(b.name);
     });
 
-  return ranked.take(3).toList();
+  return _buildRouteFromRanked(
+    ranked,
+    allowKrasnayaMultiple: asksForKrasnaya,
+  );
 }
 
 String _buildAssistantChatPrompt({
@@ -576,6 +608,94 @@ String _buildAssistantChatPrompt({
   return 'Запрос пользователя: "$query". '
       'Профиль: $groupLabel. '
       'Предпочтения: ${preferred.isEmpty ? 'не заданы' : preferred}. '
-      'Предложи короткий ответ, при необходимости задай один уточняющий вопрос и мягко подведи к маршруту. '
+      'Ниже уже есть маршрут карточками. Дай короткий дружелюбный комментарий к этому маршруту на русском, без markdown и без списков. '
+      'Не зацикливайся на одной улице и не делай акцент на улице Красной, если пользователь сам этого не просил. '
       'Вот места, которые можно рекомендовать: $places';
+}
+
+String _buildClarifyingResponse(String query, UserProfile? profile) {
+  final cleaned = query.replaceAll(RegExp(r'\s+'), ' ').trim();
+  final group = profile?.defaultGroup;
+  final groupHint = group == null ? '' : ' для формата ${_groupLabel(group)}';
+  return 'Принял: "$cleaned"$groupHint. Уточни, пожалуйста, 2 вещи: бюджет (бюджетно/средне/премиум) и темп (спокойно/активно). После этого соберу маршрут из 3 карточек.';
+}
+
+List<Venue> _buildRouteFromRanked(
+  List<Venue> ranked, {
+  required bool allowKrasnayaMultiple,
+}) {
+  if (ranked.isEmpty) return const [];
+
+  final selected = <Venue>[];
+  final usedStreets = <String>{};
+  final usedTypes = <VenueType>{};
+
+  void pickFrom(List<Venue> source) {
+    for (final venue in source) {
+      if (selected.length == 3) break;
+      if (selected.any((picked) => picked.id == venue.id)) continue;
+
+      final street = _streetKey(venue.address);
+      if (street.isNotEmpty && usedStreets.contains(street)) continue;
+      if (usedTypes.contains(venue.type) && selected.length < 2) continue;
+
+      selected.add(venue);
+      if (street.isNotEmpty) usedStreets.add(street);
+      usedTypes.add(venue.type);
+    }
+  }
+
+  if (allowKrasnayaMultiple) {
+    pickFrom(ranked);
+  } else {
+    final nonKrasnaya = ranked.where((v) => !_isKrasnayaStreet(v.address)).toList();
+    final krasnaya = ranked.where((v) => _isKrasnayaStreet(v.address)).toList();
+
+    // First, build a route from non-Krasnaya places.
+    pickFrom(nonKrasnaya);
+    if (selected.length < 3) {
+      // Fallback: allow only one Krasnaya place if not enough options.
+      pickFrom(krasnaya.take(1).toList());
+    }
+  }
+
+  if (selected.length < 3) {
+    for (final venue in ranked) {
+      if (selected.any((picked) => picked.id == venue.id)) continue;
+      if (!allowKrasnayaMultiple &&
+          _isKrasnayaStreet(venue.address) &&
+          selected.any((v) => _isKrasnayaStreet(v.address))) {
+        continue;
+      }
+      selected.add(venue);
+      if (selected.length == 3) break;
+    }
+  }
+
+  selected.sort((a, b) {
+    final aOrder = _distanceOrder(a.distance);
+    final bOrder = _distanceOrder(b.distance);
+    if (aOrder != bOrder) return aOrder.compareTo(bOrder);
+    return a.name.compareTo(b.name);
+  });
+
+  return selected;
+}
+
+int _distanceOrder(DistanceTag distance) => switch (distance) {
+      DistanceTag.near => 0,
+      DistanceTag.medium => 1,
+      DistanceTag.far => 2,
+    };
+
+String _streetKey(String address) {
+  final lower = address.toLowerCase().trim();
+  if (lower.isEmpty) return '';
+  final parts = lower.split(',');
+  return parts.first.trim();
+}
+
+bool _isKrasnayaStreet(String address) {
+  final lower = address.toLowerCase().trim();
+  return RegExp(r'(^|\b)(ул\.?\s*)?красная(\b|\s|/)').hasMatch(lower);
 }

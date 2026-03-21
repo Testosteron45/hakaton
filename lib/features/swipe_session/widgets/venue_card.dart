@@ -14,6 +14,7 @@ class VenueCard extends StatelessWidget {
     super.key,
     required this.venue,
     this.detailsProgress = 0,
+    this.compactProgress = 0,
     this.detailsExtent = 280,
     this.onDetailsDragUpdate,
     this.onDetailsDragEnd,
@@ -21,6 +22,7 @@ class VenueCard extends StatelessWidget {
 
   final Venue venue;
   final double detailsProgress;
+  final double compactProgress;
   final double detailsExtent;
   final ValueChanged<DragUpdateDetails>? onDetailsDragUpdate;
   final ValueChanged<DragEndDetails>? onDetailsDragEnd;
@@ -43,10 +45,11 @@ class VenueCard extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final p = detailsProgress.clamp(0.0, 1.0);
+            final compactP = compactProgress.clamp(0.0, 1.0);
             final ep = Curves.easeOutCubic.transform(p);
             final offsetY = detailsExtent * p;
             final previewH =
-                (constraints.maxHeight * 0.27).clamp(148.0, 182.0);
+                lerpDouble((constraints.maxHeight * 0.27).clamp(148.0, 182.0), 96.0, compactP)!;
             final parallax = detailsExtent * p * 0.22;
             final photoBottom = previewH - lerpDouble(22, 6, ep)!;
 
@@ -143,6 +146,7 @@ class VenueCard extends StatelessWidget {
                                   height: previewH,
                                   progress: p,
                                   easedProgress: ep,
+                                  compactProgress: compactP,
                                 ),
                               ),
                             ],
@@ -272,20 +276,23 @@ class _CardPreview extends StatelessWidget {
     required this.height,
     required this.progress,
     required this.easedProgress,
+    required this.compactProgress,
   });
 
   final Venue venue;
   final double height;
   final double progress;
   final double easedProgress;
+  final double compactProgress;
 
   @override
   Widget build(BuildContext context) {
     final topAlpha = lerpDouble(0.86, 0.98, easedProgress)!;
+    final compactFade = (1.0 - compactProgress * 1.8).clamp(0.0, 1.0);
     const verticalPadding = 24.0; // top 10 + bottom 14
     const handleRowHeight = 22.0;
     const handleGap = 8.0;
-    const titleApproxHeight = 24.0;
+    const titleApproxHeight = 56.0;
     final secondaryMaxHeight = (height -
             verticalPadding -
             handleRowHeight -
@@ -293,9 +300,12 @@ class _CardPreview extends StatelessWidget {
             titleApproxHeight -
             8.0)
         .clamp(0.0, 110.0);
-    final secondaryH = lerpDouble(secondaryMaxHeight, 0.0, easedProgress)!;
-    final secondaryOpacity = (1.0 - easedProgress * 1.6).clamp(0.0, 1.0);
+    final secondaryH =
+        lerpDouble(secondaryMaxHeight, 0.0, easedProgress)! * compactFade;
+    final secondaryOpacity =
+        (1.0 - easedProgress * 1.6).clamp(0.0, 1.0) * compactFade;
     final secondarySlide = 6.0 * easedProgress;
+    final titleFontSize = lerpDouble(22, 20, compactProgress)!;
 
     return Container(
       height: height,
@@ -324,94 +334,98 @@ class _CardPreview extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-          // ── Handle row with swipe hint ───────────────────────────────────
-          SizedBox(
-            height: 22,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Positioned(
-                  right: 0,
-                  child: _SwipeUpHint(progress: progress),
+                if (compactProgress < 0.98) ...[
+                  SizedBox(
+                    height: 22,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Positioned(
+                          right: 0,
+                          child: _SwipeUpHint(progress: progress),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ] else
+                  const SizedBox(height: 4),
+                Text(
+                  venue.name,
+                  maxLines: compactProgress > 0.4 ? 2 : 3,
+                  style: TextStyle(
+                    fontSize: titleFontSize,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    height: 1.1,
+                    letterSpacing: -0.3,
+                  ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          // ── Venue name ──────────────────────────────────────────────────
-          Text(
-            venue.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              height: 1.1,
-              letterSpacing: -0.3,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              _PriceTag(venue.price),
-              const SizedBox(width: 6),
-              _DistanceTag(venue.distance),
-            ],
-          ),
-          // ── Secondary: description peek + meta ──────────────────────────
-          if (secondaryH > 0)
-            ClipRect(
-              child: SizedBox(
-                height: secondaryH,
-                child: Opacity(
-                  opacity: secondaryOpacity,
-                  child: Transform.translate(
-                    offset: Offset(0, secondarySlide),
-                    child: SingleChildScrollView(
-                      physics: const NeverScrollableScrollPhysics(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 6),
-                          Text(
-                            venue.description,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white60,
-                              fontSize: 13,
-                              height: 1.4,
+                if (compactFade > 0) ...[
+                  const SizedBox(height: 8),
+                  Opacity(
+                    opacity: compactFade,
+                    child: Row(
+                      children: [
+                        _PriceTag(venue.price),
+                        const SizedBox(width: 6),
+                        _DistanceTag(venue.distance),
+                      ],
+                    ),
+                  ),
+                ],
+                if (secondaryH > 0)
+                  ClipRect(
+                    child: SizedBox(
+                      height: secondaryH,
+                      child: Opacity(
+                        opacity: secondaryOpacity,
+                        child: Transform.translate(
+                          offset: Offset(0, secondarySlide),
+                          child: SingleChildScrollView(
+                            physics: const NeverScrollableScrollPhysics(),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 6),
+                                Text(
+                                  venue.description,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 13,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.location_on_rounded,
+                                      color: Colors.white30,
+                                      size: 12,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Expanded(
+                                      child: Text(
+                                        venue.address,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white38,
+                                          fontSize: 11.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.location_on_rounded,
-                              color: Colors.white30,
-                              size: 12,
-                            ),
-                            const SizedBox(width: 3),
-                            Expanded(
-                              child: Text(
-                                venue.address,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white38,
-                                  fontSize: 11.5,
-                                ),
-                              ),
-                            ),
-                          ],
                         ),
-                        ],
                       ),
                     ),
                   ),
-                ),
-              ),
-            ),
             ],
           ),
         ),

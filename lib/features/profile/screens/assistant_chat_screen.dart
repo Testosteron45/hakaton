@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/venue_assets.dart';
 import '../../../data/models/venue.dart';
@@ -16,9 +18,13 @@ class AssistantChatScreen extends ConsumerStatefulWidget {
 class _AssistantChatScreenState extends ConsumerState<AssistantChatScreen> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
+  final SpeechToText _speech = SpeechToText();
+  bool _speechReady = false;
+  bool _isListening = false;
 
   @override
   void dispose() {
+    _speech.stop();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -133,6 +139,19 @@ class _AssistantChatScreenState extends ConsumerState<AssistantChatScreen> {
                       ),
                     ),
                     const SizedBox(width: 10),
+                    FilledButton.tonal(
+                      onPressed: state.isSending ? null : _toggleVoiceInput,
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(54, 54),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
+                      child: Icon(
+                        _isListening ? Icons.mic : Icons.mic_none_rounded,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                     FilledButton(
                       onPressed: state.isSending ? null : _send,
                       style: FilledButton.styleFrom(
@@ -166,6 +185,59 @@ class _AssistantChatScreenState extends ConsumerState<AssistantChatScreen> {
     final text = _controller.text;
     _controller.clear();
     await ref.read(assistantChatProvider.notifier).sendMessage(text);
+  }
+
+  Future<void> _toggleVoiceInput() async {
+    if (_isListening) {
+      await _speech.stop();
+      setState(() => _isListening = false);
+      return;
+    }
+
+    if (!_speechReady) {
+      _speechReady = await _speech.initialize(
+        onStatus: _onSpeechStatus,
+        onError: (_) => setState(() => _isListening = false),
+      );
+    }
+
+    if (!_speechReady || !mounted) {
+      ref.read(assistantChatProvider.notifier).appendBotMessage(
+        'Не удалось включить микрофон. Проверь разрешение в браузере.',
+      );
+      return;
+    }
+
+    ref.read(assistantChatProvider.notifier).appendBotMessage('Слушаю...');
+    setState(() => _isListening = true);
+    await _speech.listen(
+      localeId: 'ru_RU',
+      listenMode: ListenMode.confirmation,
+      onResult: _onSpeechResult,
+      listenFor: const Duration(seconds: 10),
+      pauseFor: const Duration(seconds: 3),
+      partialResults: true,
+    );
+  }
+
+  void _onSpeechStatus(String status) {
+    if (!mounted) return;
+    if (status == 'notListening' || status == 'done') {
+      setState(() => _isListening = false);
+    }
+  }
+
+  Future<void> _onSpeechResult(SpeechRecognitionResult result) async {
+    if (!mounted) return;
+    _controller.value = TextEditingValue(
+      text: result.recognizedWords,
+      selection: TextSelection.collapsed(offset: result.recognizedWords.length),
+    );
+
+    if (result.finalResult && result.recognizedWords.trim().isNotEmpty) {
+      await _send();
+      setState(() => _isListening = false);
+    }
   }
 }
 
@@ -242,55 +314,141 @@ class _VenueSuggestionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : AppColors.softBorder,
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.horizontal(left: Radius.circular(22)),
-            child: SizedBox(
-              width: 104,
-              height: 104,
-              child: _VenueSuggestionPhoto(venue: venue),
+        onTap: () => _showDetails(context),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : AppColors.softBorder,
             ),
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius:
+                    const BorderRadius.horizontal(left: Radius.circular(22)),
+                child: SizedBox(
+                  width: 104,
+                  height: 104,
+                  child: _VenueSuggestionPhoto(venue: venue),
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        venue.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        venue.description,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          height: 1.45,
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          _MiniTag(label: _typeLabel(venue.type)),
+                          _MiniTag(label: _distanceLabel(venue.distance)),
+                          _MiniTag(label: _priceLabel(venue.price)),
+                          for (final feature in venue.features.take(2))
+                            _MiniTag(label: _featureLabel(feature)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Нажми для полного описания',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDetails(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+            child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     venue.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 19,
                       fontWeight: FontWeight.w800,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
-                    venue.description,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
+                    venue.address,
                     style: TextStyle(
-                      fontSize: 12.5,
-                      height: 1.45,
+                      fontSize: 13,
                       color: Theme.of(context).textTheme.bodyMedium?.color,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: SizedBox(
+                      height: 170,
+                      width: double.infinity,
+                      child: _VenueSuggestionPhoto(venue: venue),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    venue.description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.5,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
@@ -298,14 +456,24 @@ class _VenueSuggestionCard extends StatelessWidget {
                       _MiniTag(label: _typeLabel(venue.type)),
                       _MiniTag(label: _distanceLabel(venue.distance)),
                       _MiniTag(label: _priceLabel(venue.price)),
+                      for (final feature in venue.features)
+                        _MiniTag(label: _featureLabel(feature)),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    isDark ? 'Листай вверх, чтобы закрыть' : 'Листай вниз, чтобы закрыть',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -431,4 +599,19 @@ String _priceLabel(PriceTag price) => switch (price) {
       PriceTag.budget => 'Бюджетно',
       PriceTag.mid => 'Средний чек',
       PriceTag.premium => 'Премиум',
+    };
+
+String _featureLabel(VenueFeature feature) => switch (feature) {
+      VenueFeature.kids => 'Для детей',
+      VenueFeature.christian => 'Спокойно',
+      VenueFeature.sport => 'Активно',
+      VenueFeature.romantic => 'Романтика',
+      VenueFeature.outdoor => 'На воздухе',
+      VenueFeature.alcohol => 'Вечерний вайб',
+      VenueFeature.vegetarian => 'Есть veggie',
+      VenueFeature.quiet => 'Тихое место',
+      VenueFeature.lively => 'Живо',
+      VenueFeature.cultural => 'Культура',
+      VenueFeature.historical => 'Исторично',
+      VenueFeature.nature => 'Природа',
     };

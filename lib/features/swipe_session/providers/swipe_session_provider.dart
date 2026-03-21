@@ -5,9 +5,14 @@ import '../../../shared/providers/providers.dart';
 
 // ── Session state ─────────────────────────────────────────────────────────────
 
-class SwipeSessionNotifier extends StateNotifier<SwipeSession?> {
-  SwipeSessionNotifier(this._venueRepo) : super(null);
+final lastCompletedLikedVenueIdsProvider = StateProvider<List<String>>(
+  (_) => const [],
+);
 
+class SwipeSessionNotifier extends StateNotifier<SwipeSession?> {
+  SwipeSessionNotifier(this._ref, this._venueRepo) : super(null);
+
+  final Ref _ref;
   final VenueRepository _venueRepo;
 
   void startSession(SessionMode mode) {
@@ -24,10 +29,17 @@ class SwipeSessionNotifier extends StateNotifier<SwipeSession?> {
     final s = state;
     if (s == null) return;
     final newSwipes = Map<String, bool>.from(s.swipes)..[venueId] = liked;
-    state = s.copyWith(
+    final nextState = s.copyWith(
       swipes: newSwipes,
       currentIndex: s.currentIndex + 1,
     );
+    state = nextState;
+    if (nextState.isFinished) {
+      _ref.read(lastCompletedLikedVenueIdsProvider.notifier).state = [
+        for (final entry in nextState.swipes.entries)
+          if (entry.value) entry.key,
+      ];
+    }
   }
 
   void reset() => state = null;
@@ -35,7 +47,7 @@ class SwipeSessionNotifier extends StateNotifier<SwipeSession?> {
 
 final swipeSessionProvider =
     StateNotifierProvider<SwipeSessionNotifier, SwipeSession?>((ref) {
-  return SwipeSessionNotifier(ref.read(venueRepositoryProvider));
+  return SwipeSessionNotifier(ref, ref.read(venueRepositoryProvider));
 });
 
 // ── Recommendation ─────────────────────────────────────────────────────────────
