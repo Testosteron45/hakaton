@@ -6,6 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/screens/auth_screen.dart';
 import '../../features/auth/screens/onboarding_screen.dart';
+import '../../features/map/screens/krasnodar_map_screen.dart';
+import '../../features/profile/screens/loading_screen.dart';
+import '../../features/profile/screens/profile_screen.dart';
 import '../../features/session_mode/screens/session_mode_screen.dart';
 import '../../features/swipe_session/screens/swipe_session_screen.dart';
 import '../../features/recommendation/screens/recommendation_screen.dart';
@@ -33,9 +36,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/loading',
-        builder: (_, __) => const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        ),
+        builder: (_, __) => const LoadingScreen(),
       ),
       GoRoute(
         path: '/auth',
@@ -48,6 +49,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/modes',
         builder: (_, __) => const SessionModeScreen(),
+      ),
+      GoRoute(
+        path: '/profile',
+        builder: (_, __) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/map',
+        builder: (_, __) => const KrasnodarMapScreen(),
       ),
       GoRoute(
         path: '/session',
@@ -74,6 +83,7 @@ class _AuthNotifier extends ChangeNotifier {
     );
   }
 
+  @override
   void dispose() {
     _sub.cancel();
     super.dispose();
