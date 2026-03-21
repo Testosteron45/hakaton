@@ -1,0 +1,298 @@
+{
+  "images": [
+    {
+      "name": "Парк «Краснодар»",
+      "category": "парк",
+      "file": "assets/places/01_park_krasnodar.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Японский сад",
+      "category": "сад",
+      "file": "assets/places/02_yaponskiy_sad.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Улица Красная",
+      "category": "пешеходная улица",
+      "file": "assets/places/03_ulitsa_krasnaya.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Александровская триумфальная арка",
+      "category": "архитектурная достопримечательность",
+      "file": "assets/places/04_aleksandrovskaya_triumfalnaya_arka.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Памятник Екатерине II",
+      "category": "памятник",
+      "file": "assets/places/05_pamyatnik_ekaterine_ii.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Свято-Екатерининский кафедральный собор",
+      "category": "собор",
+      "file": "assets/places/06_svyato_ekaterininskiy_kafedralnyy_sobor.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-bunker/56833/18e2fb46163511f1ae7da655cf22d617/orig"
+    },
+    {
+      "name": "Чистяковская роща",
+      "category": "парк",
+      "file": "assets/places/07_chistyakovskaya_roscha.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Городской сад",
+      "category": "парк",
+      "file": "assets/places/08_gorodskoy_sad.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Солнечный остров",
+      "category": "парк",
+      "file": "assets/places/09_solnechnyy_ostrov.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Мост поцелуев",
+      "category": "мост",
+      "file": "assets/places/10_most_potseluev.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-bunker/56833/18e2fb46163511f1ae7da655cf22d617/orig"
+    },
+    {
+      "name": "Художественный музей имени Ф. А. Коваленко",
+      "category": "музей",
+      "file": "assets/places/11_hudozhestvennyy_muzey_imeni_f_a_kovalenko.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Историко-археологический музей-заповедник имени Е. Д. Фелицына",
+      "category": "музей",
+      "file": "assets/places/12_istoriko_arheologicheskiy_muzey_zapovednik_imeni_e_d_felitsyna.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Исторический парк «Россия — Моя история»",
+      "category": "музейный парк",
+      "file": "assets/places/13_istoricheskiy_park_rossiya_moya_istoriya.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Краснодарский академический театр драмы им. Горького",
+      "category": "театр",
+      "file": "assets/places/14_krasnodarskiy_akademicheskiy_teatr_dramy_im_gorkogo.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-vh/5104700/2a000001989028ac5e02595e1b92895dc409/orig"
+    },
+    {
+      "name": "Немецкая деревня",
+      "category": "интересное место",
+      "file": "assets/places/15_nemetskaya_derevnya.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-bunker/56833/18e2fb46163511f1ae7da655cf22d617/orig"
+    },
+    {
+      "name": "Шуховская башня",
+      "category": "архитектурная достопримечательность",
+      "file": "assets/places/16_shuhovskaya_bashnya.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-bunker/56833/18e2fb46163511f1ae7da655cf22d617/orig"
+    },
+    {
+      "name": "Krasnodar Marriott Hotel",
+      "category": "отель",
+      "file": "assets/places/17_krasnodar_marriott_hotel.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Golden Tulip Krasnodar",
+      "category": "отель",
+      "file": "assets/places/18_golden_tulip_krasnodar.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Hotel Congress Krasnodar",
+      "category": "отель",
+      "file": "assets/places/19_hotel_congress_krasnodar.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-vh/4012523/2a0000018ce482d32b2c32936c0b7624c334/orig"
+    },
+    {
+      "name": "Crowne Plaza Krasnodar Centre",
+      "category": "отель",
+      "file": "assets/places/20_crowne_plaza_krasnodar_centre.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-vh/15059138/2a0000019711369c660b433732a19ff9da45/orig"
+    },
+    {
+      "name": "Отель «Триумф»",
+      "category": "отель",
+      "file": "assets/places/21_otel_triumf.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-vh/13741064/2a0000019a3f34aeee5547b1271a5bf2d654/orig"
+    },
+    {
+      "name": "Ресторан «Йоргос»",
+      "category": "ресторан",
+      "file": "assets/places/22_restoran_yorgos.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-vh/16462352/2a0000019c34e4ce34e69995cf3779c9cd20/orig"
+    },
+    {
+      "name": "Ресторан «Клёво»",
+      "category": "ресторан",
+      "file": "assets/places/23_restoran_klevo.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-vh/14331150/2a00000196e43fa27e24b897c40a4898588a/orig"
+    },
+    {
+      "name": "Ресторан «Катенька-Катюша»",
+      "category": "ресторан",
+      "file": "assets/places/24_restoran_katenka_katyusha.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-vh/6549758/2a0000018d8933faaac160be99ed8f87d77b/orig"
+    },
+    {
+      "name": "Ресторан «Фишт»",
+      "category": "кафе-ресторан",
+      "file": "assets/places/25_restoran_fisht.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-bunker/56833/18e2fb46163511f1ae7da655cf22d617/orig"
+    },
+    {
+      "name": "Ресторан «Станъ»",
+      "category": "ресторан",
+      "file": "assets/places/26_restoran_stan.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Абрау-Дюрсо",
+      "category": "винодельня",
+      "file": "assets/places/27_abrau_dyurso.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-vh/5353805/2a0000019185fbca2661354703771ce7a41a/orig"
+    },
+    {
+      "name": "Винодельня «Гай-Кодзор»",
+      "category": "винодельня",
+      "file": "assets/places/28_vinodelnya_gay_kodzor.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Chateau de Talu",
+      "category": "винодельня",
+      "file": "assets/places/29_chateau_de_talu.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-vh/16277283/2a00000197f8c10fe5557ed29328b53a4abe/orig"
+    },
+    {
+      "name": "Винодельня «Фанагория»",
+      "category": "винодельня",
+      "file": "assets/places/30_vinodelnya_fanagoriya.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-bunker/56833/18e2fb46163511f1ae7da655cf22d617/orig"
+    },
+    {
+      "name": "Винодельня «Собер Баш»",
+      "category": "винодельня",
+      "file": "assets/places/31_vinodelnya_sober_bash.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Семейная винодельня «Шато Андре»",
+      "category": "винодельня",
+      "file": "assets/places/32_semeynaya_vinodelnya_shato_andre.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Олимпийский парк Сочи",
+      "category": "олимпийский парк",
+      "file": "assets/places/33_olimpiyskiy_park_sochi.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Роза Хутор",
+      "category": "горный курорт",
+      "file": "assets/places/34_roza_hutor.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-vh/15273738/2a0000019406e8ec3ffe3072976a851eb3d4/orig"
+    },
+    {
+      "name": "Кипарисовое озеро Сукко",
+      "category": "природная достопримечательность",
+      "file": "assets/places/35_kiparisovoe_ozero_sukko.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "33 водопада",
+      "category": "водопады",
+      "file": "assets/places/36_33_vodopada.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Скала Киселева",
+      "category": "природная достопримечательность",
+      "file": "assets/places/37_skala_kiseleva.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-altay/17754824/2a0000019ccdcbc2201371f33ca495cba753/L_height"
+    },
+    {
+      "name": "ТРЦ «Галерея Краснодар»",
+      "category": "торгово-развлекательный центр",
+      "file": "assets/places/38_trts_galereya_krasnodar.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-altay/2960979/2a0000017332acd90b30ad4586369c3bade9/L_height"
+    },
+    {
+      "name": "OZ МОЛЛ",
+      "category": "торгово-развлекательный центр",
+      "file": "assets/places/39_oz_moll.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-altay/11421909/2a00000190979c7b19d84bcd098c4a49b349/L_height"
+    },
+    {
+      "name": "СБС Мегамолл",
+      "category": "торгово-развлекательный центр",
+      "file": "assets/places/40_sbs_megamoll.jpg",
+      "source": "existing",
+      "url": ""
+    },
+    {
+      "name": "Мегацентр «Красная Площадь»",
+      "category": "торгово-развлекательный центр",
+      "file": "assets/places/41_megatsentr_krasnaya_ploschad.jpg",
+      "source": "yandex",
+      "url": "https://avatars.mds.yandex.net/get-altay/9847279/2a0000018dfaef4e08fae9fdae60887cf7f9/L_height"
+    },
+    {
+      "name": "ТРК «Сити Центр»",
+      "category": "торгово-развлекательный центр",
+      "file": "assets/places/42_trk_siti_tsentr.jpg",
+      "source": "existing",
+      "url": ""
+    }
+  ]
+}
