@@ -58,7 +58,7 @@ class KazakAssistantCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Казачок-помощник',
+                        'Понаехчик',
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
@@ -67,7 +67,7 @@ class KazakAssistantCard extends ConsumerWidget {
                       ),
                       SizedBox(height: 2),
                       Text(
-                        'Живой ассистент. Тап по модели = нейро-ответ.',
+                        'Живой ассистент. Тап по модели = ответ от Понаехчика.',
                         style: TextStyle(
                           fontSize: 13,
                           color: Theme.of(context).textTheme.bodyMedium?.color,

@@ -131,7 +131,7 @@ class _GlobalAssistantOverlayState
                   ),
                   child: PointerInterceptor(
                     child: _AssistantActionButton(
-                      label: 'Поболтать с ботом',
+                      label: 'Открыть Понаехчика',
                       onTap: () {
                         setState(() => _expanded = false);
                         widget.onOpenChat();

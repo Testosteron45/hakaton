@@ -7,14 +7,37 @@ import '../../../data/models/user_profile.dart';
 import '../../../data/models/venue.dart';
 import '../../../data/repositories/venue_repository.dart' show VenueStats;
 import '../../../shared/providers/providers.dart';
+import '../../../shared/widgets/venue_map_icon_button.dart';
 import '../../swipe_session/providers/swipe_session_provider.dart';
 import '../widgets/kazak_assistant_card.dart';
+import '../widgets/profile_feed_view.dart';
 
-class ProfileScreen extends ConsumerWidget {
-  const ProfileScreen({super.key});
+enum _ProfileTab { profile, feed }
+
+class ProfileScreen extends ConsumerStatefulWidget {
+  const ProfileScreen({
+    super.key,
+    this.showFeedOnOpen = false,
+  });
+
+  final bool showFeedOnOpen;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  late _ProfileTab _activeTab;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeTab = widget.showFeedOnOpen ? _ProfileTab.feed : _ProfileTab.profile;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     final user = ref.watch(authStateProvider).valueOrNull;
     final profileAsync = ref.watch(userProfileProvider);
     final venues = ref.watch(venueRepositoryProvider).getAll();
@@ -60,31 +83,42 @@ class ProfileScreen extends ConsumerWidget {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                        child: Row(
+                        child: Column(
                           children: [
-                            _TopButton(
-                              icon: Icons.arrow_back_rounded,
-                              onTap: () => context.pop(),
-                            ),
-                            const SizedBox(width: 14),
-                            const Expanded(
-                              child: Text(
-                                'Профиль',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.textPrimary,
+                            Row(
+                              children: [
+                                _TopButton(
+                                  icon: Icons.arrow_back_rounded,
+                                  onTap: () => context.pop(),
                                 ),
-                              ),
+                                const SizedBox(width: 14),
+                                const Expanded(
+                                  child: Text(
+                                    'Профиль',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                const _ThemeToggleButton(),
+                                const SizedBox(width: 10),
+                                _TopButton(
+                                  icon: Icons.logout_rounded,
+                                  onTap: () async {
+                                    await ref.read(authProvider).signOut();
+                                    if (context.mounted) context.go('/auth');
+                                  },
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 10),
-                            const _ThemeToggleButton(),
-                            const SizedBox(width: 10),
-                            _TopButton(
-                              icon: Icons.logout_rounded,
-                              onTap: () async {
-                                await ref.read(authProvider).signOut();
-                                if (context.mounted) context.go('/auth');
+                            const SizedBox(height: 14),
+                            _ProfileTabs(
+                              activeTab: _activeTab,
+                              onChanged: (tab) {
+                                setState(() => _activeTab = tab);
                               },
                             ),
                           ],
@@ -92,133 +126,264 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                     ),
                     const SliverToBoxAdapter(child: SizedBox(height: 18)),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: _ProfileHero(insights: insights),
+                    if (_activeTab == _ProfileTab.profile) ...[
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: _ProfileHero(insights: insights),
+                        ),
                       ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                    const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        child: KazakAssistantCard(),
-                      ),
-                    ),
-                    if (profileAsync.isLoading) ...[
-                      const SliverToBoxAdapter(child: SizedBox(height: 14)),
+                      const SliverToBoxAdapter(child: SizedBox(height: 16)),
                       const SliverToBoxAdapter(
-                        child: Center(
-                          child: CircularProgressIndicator(color: AppColors.primary),
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20),
+                          child: KazakAssistantCard(),
+                        ),
+                      ),
+                      if (profileAsync.isLoading) ...[
+                        const SliverToBoxAdapter(child: SizedBox(height: 14)),
+                        const SliverToBoxAdapter(
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SliverToBoxAdapter(child: SizedBox(height: 22)),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: _SectionTitle(
+                            title: 'Твоя статистика',
+                            subtitle:
+                                'Коротко и по делу о том, что тебе реально подходит.',
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        sliver: SliverGrid(
+                          delegate: SliverChildListDelegate.fixed([
+                            _StatCard(
+                              label: 'Дней в приложении',
+                              value: '${insights.daysInApp}',
+                              icon: Icons.timelapse_rounded,
+                              accent: AppColors.primary,
+                            ),
+                            _StatCard(
+                              label: 'Мест под твой вайб',
+                              value: '${insights.matchedCount}',
+                              icon: Icons.auto_awesome_rounded,
+                              accent: AppColors.secondary,
+                            ),
+                            _StatCard(
+                              label: 'Рядом с тобой',
+                              value: '${insights.nearbyCount}',
+                              icon: Icons.near_me_rounded,
+                              accent: AppColors.accent,
+                            ),
+                            _StatCard(
+                              label: 'Любимых форматов',
+                              value: '${insights.typeCount}',
+                              icon: Icons.grid_view_rounded,
+                              accent: AppColors.success,
+                            ),
+                          ]),
+                          gridDelegate:
+                              const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 220,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                            mainAxisExtent: 108,
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 22)),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: _SectionTitle(
+                            title: 'Портрет вкуса',
+                            subtitle: insights.vibeSubtitle,
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: _TasteCard(
+                            insights: insights,
+                            likedVenues: likedVenues,
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                          child: OutlinedButton.icon(
+                            onPressed: () => context.push('/onboarding'),
+                            icon: const Icon(Icons.tune_rounded),
+                            label: const Text('Перенастроить интересы'),
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 28)),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: _SectionTitle(
+                            title: 'Моё заведение',
+                            subtitle:
+                                'Добавьте своё место и смотрите, как на него реагируют.',
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                          child: _MyVenueSection(
+                            onAdd: () => context.push('/add-venue'),
+                            onTap: (id) => context.push('/my-venue', extra: id),
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                          child: ProfileFeedView(venues: venues),
                         ),
                       ),
                     ],
-                    const SliverToBoxAdapter(child: SizedBox(height: 22)),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: _SectionTitle(
-                          title: 'Твоя статистика',
-                          subtitle:
-                              'Коротко и по делу о том, что тебе реально подходит.',
-                        ),
-                      ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      sliver: SliverGrid(
-                        delegate: SliverChildListDelegate.fixed([
-                          _StatCard(
-                            label: 'Дней в приложении',
-                            value: '${insights.daysInApp}',
-                            icon: Icons.timelapse_rounded,
-                            accent: AppColors.primary,
-                          ),
-                          _StatCard(
-                            label: 'Мест под твой вайб',
-                            value: '${insights.matchedCount}',
-                            icon: Icons.auto_awesome_rounded,
-                            accent: AppColors.secondary,
-                          ),
-                          _StatCard(
-                            label: 'Рядом с тобой',
-                            value: '${insights.nearbyCount}',
-                            icon: Icons.near_me_rounded,
-                            accent: AppColors.accent,
-                          ),
-                          _StatCard(
-                            label: 'Любимых форматов',
-                            value: '${insights.typeCount}',
-                            icon: Icons.grid_view_rounded,
-                            accent: AppColors.success,
-                          ),
-                        ]),
-                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 220,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          mainAxisExtent: 108,
-                        ),
-                      ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 22)),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: _SectionTitle(
-                          title: 'Портрет вкуса',
-                          subtitle: insights.vibeSubtitle,
-                        ),
-                      ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: _TasteCard(
-                          insights: insights,
-                          likedVenues: likedVenues,
-                        ),
-                      ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 8)),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-                        child: OutlinedButton.icon(
-                          onPressed: () => context.push('/onboarding'),
-                          icon: const Icon(Icons.tune_rounded),
-                          label: const Text('Перенастроить интересы'),
-                        ),
-                      ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 28)),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: _SectionTitle(
-                          title: 'Моё заведение',
-                          subtitle:
-                              'Добавьте своё место и смотрите, как на него реагируют.',
-                        ),
-                      ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-                        child: _MyVenueSection(
-                          onAdd: () => context.push('/add-venue'),
-                          onTap: (id) => context.push('/my-venue', extra: id),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileTabs extends StatelessWidget {
+  const _ProfileTabs({
+    required this.activeTab,
+    required this.onChanged,
+  });
+
+  final _ProfileTab activeTab;
+  final ValueChanged<_ProfileTab> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : AppColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : AppColors.softBorder,
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _ProfileTabButton(
+              label: 'Профиль',
+              icon: Icons.person_rounded,
+              isActive: activeTab == _ProfileTab.profile,
+              onTap: () => onChanged(_ProfileTab.profile),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _ProfileTabButton(
+              label: 'Лента',
+              icon: Icons.view_stream_rounded,
+              isActive: activeTab == _ProfileTab.feed,
+              onTap: () => onChanged(_ProfileTab.feed),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileTabButton extends StatelessWidget {
+  const _ProfileTabButton({
+    required this.label,
+    required this.icon,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: isActive
+                ? AppColors.primary
+                : (isDark ? Colors.transparent : Colors.white),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.22),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: isActive
+                    ? Colors.white
+                    : Theme.of(context).textTheme.bodyMedium?.color,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w800,
+                  color: isActive
+                      ? Colors.white
+                      : Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -640,6 +805,11 @@ class _LikedVenueMiniCard extends StatelessWidget {
                   height: 82,
                   child: _LikedVenuePhoto(venue: venue),
                 ),
+              ),
+              Positioned(
+                top: 8,
+                left: 8,
+                child: VenueMapIconButton(venue: venue, size: 28),
               ),
               Positioned(
                 top: 8,

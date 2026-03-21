@@ -6,6 +6,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/venue_assets.dart';
 import '../../../data/models/venue.dart';
+import '../../../shared/widgets/venue_map_icon_button.dart';
 import '../providers/assistant_provider.dart';
 
 class AssistantChatScreen extends ConsumerStatefulWidget {
@@ -65,7 +66,7 @@ class _AssistantChatScreenState extends ConsumerState<AssistantChatScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Поболтать с ботом',
+                          'Понаехчик',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -73,7 +74,7 @@ class _AssistantChatScreenState extends ConsumerState<AssistantChatScreen> {
                           ),
                         ),
                         Text(
-                          'Он задаёт вопросы и предлагает места карточками',
+                          'Полезно отвечает, задаёт вопросы и кидает места карточками',
                           style: TextStyle(
                             fontSize: 12.5,
                             color: Theme.of(context).textTheme.bodyMedium?.color,
@@ -347,15 +348,26 @@ class _VenueSuggestionCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        venue.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              venue.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                          if (venue.mapUrl != null && venue.mapUrl!.trim().isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            VenueMapIconButton(venue: venue, size: 30),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 6),
                       Text(

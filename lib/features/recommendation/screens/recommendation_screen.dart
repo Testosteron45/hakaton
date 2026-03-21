@@ -7,6 +7,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/venue_assets.dart';
 import '../../../data/models/venue.dart';
 import '../../../data/services/recommendation_service.dart';
+import '../../../shared/widgets/venue_map_icon_button.dart';
 import '../../swipe_session/providers/swipe_session_provider.dart';
 
 class RecommendationScreen extends ConsumerWidget {
@@ -282,6 +283,10 @@ class _ResultCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (venue.mapUrl != null && venue.mapUrl!.trim().isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          VenueMapIconButton(venue: venue, size: 32),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 6),

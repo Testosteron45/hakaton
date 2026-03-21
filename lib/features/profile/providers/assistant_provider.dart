@@ -6,6 +6,8 @@ import '../../../data/models/venue.dart';
 import '../../../shared/providers/providers.dart';
 import '../models/assistant_customization.dart';
 
+const _assistantName = 'Понаехчик';
+
 enum KazakAssistantMood {
   idle,
   dance,
@@ -102,8 +104,8 @@ final kazakAssistantSnapshotProvider =
   final resolvedPhrase = aiReply ??
       (aiLoading
           ? (
-              'Нейро-режим',
-              'Секунду, собираю ответ под твой текущий вкус и формат мест...',
+              _assistantName,
+              'Ща без суеты соберу нормальный ответ под твой запрос и текущий вкус.',
             )
           : selectedPhrase);
 
@@ -116,7 +118,7 @@ final kazakAssistantSnapshotProvider =
       '${effective.length} мест подходят',
       '$nearbyCount рядом',
       if (typeLabels.isNotEmpty) typeLabels.join(' · '),
-      if (aiReply != null || aiLoading) 'ответ через Groq',
+      if (aiReply != null || aiLoading) 'ответ от $_assistantName',
     ],
     ctaLabel: _ctaLabel(mood),
     matchCount: effective.length,
@@ -192,7 +194,7 @@ class AssistantChatController extends StateNotifier<AssistantChatState> {
           id: _messageId(),
           role: AssistantChatRole.bot,
           text:
-              'Привет. Давай соберём маршрут под тебя. Что хочешь сегодня: спокойную прогулку, поесть, романтику, активность или формат с детьми?',
+              'Я $_assistantName. Соберём тебе внятный маршрут без городской чепухи. Что хочешь сегодня: спокойно погулять, вкусно поесть, романтику, движ или формат с детьми?',
         ),
       ],
       hasClarifiedIntent: false,
@@ -211,7 +213,7 @@ class AssistantChatController extends StateNotifier<AssistantChatState> {
     final loadingMessage = AssistantChatMessage(
       id: _messageId(),
       role: AssistantChatRole.bot,
-      text: 'Секунду, подбираю маршрут и места...',
+      text: 'Секунду, фильтрую лишний шум и собираю маршрут...',
       isLoading: true,
     );
 
@@ -225,21 +227,16 @@ class AssistantChatController extends StateNotifier<AssistantChatState> {
       final configured = ref.read(groqConfiguredProvider);
       final profile = ref.read(userProfileProvider).valueOrNull;
       final venues = ref.read(venueRepositoryProvider).getAll();
-      final shouldClarifyFirst = !state.hasClarifiedIntent;
-      final recommended = shouldClarifyFirst
-          ? const <Venue>[]
-          : _recommendVenuesForQuery(
-              venues: venues,
-              query: text,
-              profile: profile,
-            );
+      final recommended = _recommendVenuesForQuery(
+        venues: venues,
+        query: text,
+        profile: profile,
+      );
 
       String botText;
-      if (shouldClarifyFirst) {
-        botText = _buildClarifyingResponse(text, profile);
-      } else if (!configured) {
+      if (!configured) {
         botText =
-            'Понял, собрал маршрут карточками ниже. Если хочешь, уточни район, бюджет или темп вечера, и я перестрою план.';
+            'Маршрут карточками ниже уже собран. Докинь район, бюджет или темп вечера, и я быстро перестрою всё без гадания на кофейной гуще.';
       } else {
         final prompt = _buildAssistantChatPrompt(
           query: text,
@@ -248,14 +245,21 @@ class AssistantChatController extends StateNotifier<AssistantChatState> {
         );
         botText = await groq.generateText(
           systemPrompt:
-              'Ты дружелюбный городской travel-ассистент. Отвечай на русском, коротко, живо, без markdown и без списков. Если данных мало, задай один уточняющий вопрос.',
+              'Ты $_assistantName, городской ассистент по Краснодару. '
+              'Отвечай только на русском. '
+              'Тон: полезный, уверенный, слегка дерзкий, с лёгким юмором, но без хамства и клоунады. '
+              'Опирайся только на факты из запроса, профиля и переданных мест. '
+              'Ничего не выдумывай: не придумывай локации, цены, расстояния, режим работы, события или особенности мест, которых нет в данных. '
+              'Если данных мало или выбор слабый, честно скажи это и задай ровно один уточняющий вопрос. '
+              'Если места переданы, кратко объясни, почему подходят, и упомяни 1-3 названия. '
+              'Формат ответа: 2-4 короткие фразы, без markdown, без списков, без эмодзи.',
           userPrompt: prompt,
-          temperature: 0.8,
+          temperature: 0.45,
           maxTokens: 180,
         );
       }
 
-      final cleaned = botText.replaceAll(RegExp(r'\s+'), ' ').trim();
+      final cleaned = _cleanAssistantText(botText);
       final response = AssistantChatMessage(
         id: _messageId(),
         role: AssistantChatRole.bot,
@@ -279,7 +283,7 @@ class AssistantChatController extends StateNotifier<AssistantChatState> {
             id: _messageId(),
             role: AssistantChatRole.bot,
             text:
-                'Не удалось достучаться до нейросети. Но я всё равно могу показывать карточки мест. Попробуй уточнить запрос ещё раз.',
+                'До $_assistantName сейчас не достучались. Но карточки мест живы, так что уточни запрос ещё раз и попробуем без магии.',
           ),
         ],
       );
@@ -337,28 +341,31 @@ class KazakAssistantActions {
 
       if (!configured) {
         ref.read(kazakAssistantAiReplyProvider.notifier).state = (
-          'Нейро не настроен',
-          'Передай ключ запуска: --dart-define=GROQ_API_KEY=... и я буду отвечать по-настоящему через Groq.',
+          _assistantName,
+          'Я бы ответил как надо, но ключ Groq не настроен. Передай --dart-define=GROQ_API_KEY=..., и погнали по-взрослому.',
         );
         return;
       }
 
       final prompt =
           'Пользователь выбирает места в Краснодаре.\n'
-          'Сформируй короткий дружелюбный совет на русском языке (1-2 предложения, до 220 символов).\n'
+          'Сформируй короткий полезный совет на русском языке (1-2 предложения, до 220 символов).\n'
           'Контекст: подходит мест ${snapshot.matchCount}, рядом ${snapshot.nearbyCount}, форматы: ${snapshot.typeLabels.join(', ')}.';
 
       final content = await groq.generateText(
         systemPrompt:
-            'Ты ассистент городских рекомендаций. Отвечай понятно, без markdown и без списка.',
+            'Ты $_assistantName, ассистент городских рекомендаций по Краснодару. '
+            'Отвечай полезно, ясно, слегка дерзко и с лёгким юмором. '
+            'Ничего не выдумывай сверх переданного контекста. '
+            'Формат: 1-2 предложения, без markdown, без списков, без эмодзи.',
         userPrompt: prompt,
-        temperature: 0.8,
+        temperature: 0.45,
         maxTokens: 120,
       );
 
-      final cleaned = content.replaceAll(RegExp(r'\s+'), ' ').trim();
+      final cleaned = _cleanAssistantText(content);
       ref.read(kazakAssistantAiReplyProvider.notifier).state = (
-        'Нейро-совет',
+        _assistantName,
         cleaned.length > 260 ? '${cleaned.substring(0, 257)}...' : cleaned,
       );
       ref.read(kazakAssistantMoodProvider.notifier).state =
@@ -368,7 +375,7 @@ class KazakAssistantActions {
       final shortDetails =
           details.length > 170 ? '${details.substring(0, 167)}...' : details;
       ref.read(kazakAssistantAiReplyProvider.notifier).state = (
-        'Не вышло с нейро',
+        '$_assistantName не в духе',
         'Ошибка запроса к Groq: $shortDetails',
       );
     } finally {
@@ -608,16 +615,18 @@ String _buildAssistantChatPrompt({
   return 'Запрос пользователя: "$query". '
       'Профиль: $groupLabel. '
       'Предпочтения: ${preferred.isEmpty ? 'не заданы' : preferred}. '
-      'Ниже уже есть маршрут карточками. Дай короткий дружелюбный комментарий к этому маршруту на русском, без markdown и без списков. '
+      'Ниже уже есть маршрут карточками. Дай короткий полезный комментарий к нему на русском. '
+      'Не выдумывай факты и не советуй места, которых нет в списке. '
       'Не зацикливайся на одной улице и не делай акцент на улице Красной, если пользователь сам этого не просил. '
-      'Вот места, которые можно рекомендовать: $places';
+      'Если мест мало или подборка слабая, честно скажи это и задай один уточняющий вопрос. '
+      'Вот места, которые можно рекомендовать: ${places.isEmpty ? 'подборки пока нет' : places}';
 }
 
-String _buildClarifyingResponse(String query, UserProfile? profile) {
-  final cleaned = query.replaceAll(RegExp(r'\s+'), ' ').trim();
-  final group = profile?.defaultGroup;
-  final groupHint = group == null ? '' : ' для формата ${_groupLabel(group)}';
-  return 'Принял: "$cleaned"$groupHint. Уточни, пожалуйста, 2 вещи: бюджет (бюджетно/средне/премиум) и темп (спокойно/активно). После этого соберу маршрут из 3 карточек.';
+String _cleanAssistantText(String text) {
+  final withoutMarkdown = text
+      .replaceAll(RegExp(r'[*_`#>]+'), ' ')
+      .replaceAll(RegExp(r'^\s*[-•]+\s*', multiLine: true), '');
+  return withoutMarkdown.replaceAll(RegExp(r'\s+'), ' ').trim();
 }
 
 List<Venue> _buildRouteFromRanked(

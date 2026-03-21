@@ -57,6 +57,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const ProfileScreen(),
       ),
       GoRoute(
+        path: '/feed',
+        builder: (_, __) => const ProfileScreen(showFeedOnOpen: true),
+      ),
+      GoRoute(
         path: '/assistant-chat',
         builder: (_, __) => const AssistantChatScreen(),
       ),
