@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/venue_assets.dart';
 import '../../../data/models/venue.dart';
 import '../../../data/services/recommendation_service.dart';
 import '../../swipe_session/providers/swipe_session_provider.dart';
@@ -254,7 +255,7 @@ class _ResultCard extends StatelessWidget {
               child: SizedBox(
                 width: 110,
                 height: 110,
-                child: _RecommendationPhoto(imageUrl: venue.photoUrl),
+                child: _RecommendationPhoto(venueId: venue.id, imageUrl: venue.photoUrl),
               ),
             ),
 
@@ -333,12 +334,22 @@ class _ResultCard extends StatelessWidget {
 }
 
 class _RecommendationPhoto extends StatelessWidget {
-  const _RecommendationPhoto({required this.imageUrl});
+  const _RecommendationPhoto({required this.venueId, required this.imageUrl});
 
+  final String venueId;
   final String imageUrl;
 
   @override
   Widget build(BuildContext context) {
+    final assetPath = kVenueAssets[venueId];
+    if (assetPath != null) {
+      return Image.asset(
+        assetPath,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _error(),
+      );
+    }
+
     if (kIsWeb) {
       return Image.network(
         imageUrl,
