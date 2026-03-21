@@ -1,0 +1,25 @@
+/// Maps venue IDs to local asset image paths.
+/// Falls back to network URL if ID is not listed here.
+const Map<String, String> kVenueAssets = {
+  'park_krasnodar':            'assets/places/01_park_krasnodar.jpg',
+  'park_japanese_garden':      'assets/places/02_yaponskiy_sad.jpg',
+  'attr_krasnaya_street':      'assets/places/03_ulitsa_krasnaya.jpg',
+  'attr_triumfalnaya_arka':    'assets/places/04_aleksandrovskaya_triumfalnaya_arka.jpg',
+  'attr_ekaterina_monument':   'assets/places/05_pamyatnik_ekaterine_ii.jpg',
+  'temple_ekaterininskiy':     'assets/places/06_svyato_ekaterininskiy_kafedralnyy_sobor.jpg',
+  'park_chistyakovskaya':      'assets/places/07_chistyakovskaya_roscha.jpg',
+  'park_gorodskoy_sad':        'assets/places/08_gorodskoy_sad.jpg',
+  'park_solnechny_ostrov':     'assets/places/09_solnechnyy_ostrov.jpg',
+  'attr_most_potseluev':       'assets/places/10_most_potseluev.jpg',
+  'museum_kovalenko':          'assets/places/11_hudozhestvennyy_muzey_imeni_f_a_kovalenko.jpg',
+  'museum_felitsyna':          'assets/places/12_istoriko_arheologicheskiy_muzey_zapovednik_imeni_e_d_felitsyna.jpg',
+  'museum_rossiya_moya_istoriya': 'assets/places/13_istoricheskiy_park_rossiya_moya_istoriya.jpg',
+  'theater_gorky':             'assets/places/14_krasnodarskiy_akademicheskiy_teatr_dramy_im_gorkogo.jpg',
+  'attr_nemetskaya_derevnya':  'assets/places/15_nemetskaya_derevnya.jpg',
+  'attr_shukhov_tower':        'assets/places/16_shuhovskaya_bashnya.jpg',
+  'rest_yorgos':               'assets/places/22_restoran_yorgos.jpg',
+  'rest_klyovo':               'assets/places/23_restoran_klevo.jpg',
+  'rest_katenka':              'assets/places/24_restoran_katenka_katyusha.jpg',
+  'rest_fisht':                'assets/places/25_restoran_fisht.jpg',
+  'rest_stan':                 'assets/places/26_restoran_stan.jpg',
+};

@@ -93,6 +93,18 @@ extension SessionModeLabel on SessionMode {
     if (this == SessionMode.foodie) return VenueType.restaurant;
     return null;
   }
+
+  /// Filter by string category (from Firestore). Takes priority over requiredType for foodie.
+  List<String>? get requiredCategories {
+    switch (this) {
+      case SessionMode.christian:
+        return ['собор'];
+      case SessionMode.foodie:
+        return ['ресторан', 'кафе'];
+      default:
+        return null;
+    }
+  }
 }
 
 class SwipeSession {

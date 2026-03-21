@@ -21,6 +21,7 @@ class InferredPreferences {
     required this.preferredPrice,
     required this.preferredTypes,
     required this.preferredFeatures,
+    this.preferredTags = const [],
   });
 
   final DistanceTag? preferredDistance;
@@ -28,6 +29,7 @@ class InferredPreferences {
   final PriceTag? preferredPrice;
   final List<VenueType> preferredTypes;
   final List<VenueFeature> preferredFeatures;
+  final List<String> preferredTags;
 }
 
 class RecommendationService {
@@ -138,12 +140,30 @@ class RecommendationService {
         .toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
+    // Tags (fine-grained signal from Firestore)
+    final tagCount = <String, int>{};
+    for (final v in liked) {
+      for (final t in v.tags) {
+        tagCount[t] = (tagCount[t] ?? 0) + 1;
+      }
+    }
+    for (final v in disliked) {
+      for (final t in v.tags) {
+        tagCount[t] = (tagCount[t] ?? 0) - 1;
+      }
+    }
+    final prefTags = tagCount.entries
+        .where((e) => e.value > 0)
+        .toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
     return InferredPreferences(
       preferredDistance: prefDist,
       preferredGroup: prefGroup,
       preferredPrice: prefPrice,
       preferredTypes: prefTypes.map((e) => e.key).take(3).toList(),
       preferredFeatures: prefFeatures.map((e) => e.key).take(5).toList(),
+      preferredTags: prefTags.map((e) => e.key).take(10).toList(),
     );
   }
 
@@ -197,6 +217,13 @@ class RecommendationService {
     // Features
     for (final f in prefs.preferredFeatures) {
       if (v.features.contains(f)) score += 1;
+    }
+
+    // Tags (fine-grained, capped at +3 to not dominate type signal)
+    if (prefs.preferredTags.isNotEmpty) {
+      final tagMatches =
+          v.tags.where((t) => prefs.preferredTags.contains(t)).length;
+      score += (tagMatches * 0.5).clamp(0.0, 3.0);
     }
 
     return score;

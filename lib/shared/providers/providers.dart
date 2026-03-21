@@ -7,6 +7,7 @@ import '../../data/models/user_profile.dart';
 import '../../data/repositories/user_profile_repository.dart';
 import '../../data/repositories/venue_repository.dart';
 import '../../data/services/recommendation_service.dart';
+import '../../data/services/venue_seed_service.dart';
 
 // ── Firebase ──────────────────────────────────────────────────────────────────
 
@@ -25,8 +26,24 @@ final authStateProvider = StreamProvider<User?>(
 
 // ── Repositories ──────────────────────────────────────────────────────────────
 
-final venueRepositoryProvider =
-    Provider<VenueRepository>((_) => VenueRepository());
+final venueRepositoryProvider = Provider<VenueRepository>(
+  (ref) => VenueRepository(ref.read(firestoreProvider)),
+);
+
+/// Seeds Firestore with venues (no-op if already seeded),
+/// then loads them into the repository cache.
+final venuesInitProvider = FutureProvider<void>((ref) async {
+  final repo = ref.read(venueRepositoryProvider);
+  final firestore = ref.read(firestoreProvider);
+  try {
+    await VenueSeedService(firestore)
+        .seedIfEmpty()
+        .timeout(const Duration(seconds: 10));
+    await repo.loadFromFirestore().timeout(const Duration(seconds: 10));
+  } catch (_) {
+    // Firestore недоступен — продолжаем без данных
+  }
+});
 
 final userProfileRepositoryProvider = Provider<UserProfileRepository>(
   (ref) => UserProfileRepository(ref.read(firestoreProvider)),

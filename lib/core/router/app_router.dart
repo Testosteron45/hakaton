@@ -29,8 +29,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isAuth = authState.valueOrNull != null;
       final loc = state.matchedLocation;
       if (!isAuth && loc != '/auth') return '/auth';
-      if (isAuth && loc == '/auth') return '/modes';
-      if (isAuth && loc == '/loading') return '/modes';
+      if (isAuth && loc == '/auth') return '/loading';
       return null;
     },
     routes: [
