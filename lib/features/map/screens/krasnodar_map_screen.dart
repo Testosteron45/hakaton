@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/venue.dart';
@@ -289,12 +290,37 @@ class KrasnodarMapScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Понятно'),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Понятно'),
+                      ),
+                    ),
+                    if (place.mapUrl != null) ...[
+                      const SizedBox(width: 10),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final uri = Uri.parse(place.mapUrl!);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.map_outlined, size: 16),
+                        label: const Text('Яндекс Карты'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.3),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -557,24 +583,32 @@ class _MapPlace {
     required this.category,
     this.featured = false,
     this.isCardPlace = false,
+    this.mapUrl,
   });
 
   factory _MapPlace.fromVenue(
     Venue venue, {
     required bool isCardPlace,
   }) {
-    final (lat, lon) = _resolveVenueBaseCoordinate(venue.address);
+    final LatLng location;
+    if (venue.lat != null && venue.lon != null) {
+      location = LatLng(venue.lat!, venue.lon!);
+    } else {
+      final (lat, lon) = _resolveVenueBaseCoordinate(venue.address);
+      location = LatLng(
+        lat + _seedOffset(venue.id, 0.045),
+        lon + _seedOffset('${venue.id}_lon', 0.06),
+      );
+    }
     return _MapPlace(
       id: venue.id,
       name: venue.name,
       subtitle: venue.address,
-      location: LatLng(
-        lat + _seedOffset(venue.id, 0.045),
-        lon + _seedOffset('${venue.id}_lon', 0.06),
-      ),
+      location: location,
       category:
           isCardPlace ? _MapCategory.card : _categoryFromVenueType(venue.type),
       isCardPlace: isCardPlace,
+      mapUrl: venue.mapUrl,
     );
   }
 
@@ -585,6 +619,7 @@ class _MapPlace {
   final _MapCategory category;
   final bool featured;
   final bool isCardPlace;
+  final String? mapUrl;
 
   String get categoryLabel => switch (category) {
         _MapCategory.card => 'Место из подбора',

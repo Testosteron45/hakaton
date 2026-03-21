@@ -49,7 +49,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           password: _passwordCtrl.text,
         );
         await cred.user?.updateDisplayName(_nameCtrl.text.trim());
-        if (mounted) context.go('/onboarding');
+        if (mounted) context.go('/loading');
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {

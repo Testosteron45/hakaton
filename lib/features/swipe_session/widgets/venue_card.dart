@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/venue.dart';
@@ -91,6 +89,10 @@ class VenueCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 10),
+                        if (venue.rating != null) ...[
+                          _RatingTag(venue.rating!),
+                          const SizedBox(width: 6),
+                        ],
                         _PriceTag(venue.price),
                         const SizedBox(width: 6),
                         _DistanceTag(venue.distance),
@@ -114,24 +116,14 @@ class _VenuePhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (kIsWeb) {
-      return Image.network(
-        imageUrl,
-        fit: BoxFit.cover,
-        webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return _placeholder();
-        },
-        errorBuilder: (_, __, ___) => _error(),
-      );
-    }
-
-    return CachedNetworkImage(
-      imageUrl: imageUrl,
+    return Image.network(
+      imageUrl,
       fit: BoxFit.cover,
-      placeholder: (_, __) => _placeholder(),
-      errorWidget: (_, __, ___) => _error(),
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return _placeholder();
+      },
+      errorBuilder: (_, __, ___) => _error(),
     );
   }
 
@@ -253,6 +245,39 @@ class _DistanceTag extends StatelessWidget {
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
+      ),
+    );
+  }
+}
+
+class _RatingTag extends StatelessWidget {
+  const _RatingTag(this.rating);
+
+  final double rating;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFBBF24).withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFFBBF24).withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.star_rounded, color: Color(0xFFFBBF24), size: 13),
+          const SizedBox(width: 3),
+          Text(
+            rating.toStringAsFixed(1),
+            style: const TextStyle(
+              color: Color(0xFFFBBF24),
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }

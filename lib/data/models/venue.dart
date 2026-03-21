@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum VenueType {
   restaurant,
   cafe,
@@ -60,6 +62,12 @@ class Venue {
     required this.price,
     required this.features,
     required this.address,
+    this.category = '',
+    this.tags = const [],
+    this.lat,
+    this.lon,
+    this.mapUrl,
+    this.rating,
   });
 
   final String id;
@@ -72,4 +80,71 @@ class Venue {
   final PriceTag price;
   final List<VenueFeature> features;
   final String address;
+  // Broad category for session filtering (e.g. "музей", "парк", "винодельня")
+  final String category;
+  // Russian-language tags for fine-grained recommendation scoring
+  final List<String> tags;
+  final double? lat;
+  final double? lon;
+  // Yandex Maps link for navigation
+  final String? mapUrl;
+  // Yandex Maps rating (1.0–5.0)
+  final double? rating;
+
+  factory Venue.fromFirestore(DocumentSnapshot doc) {
+    final d = doc.data() as Map<String, dynamic>;
+    return Venue(
+      id: doc.id,
+      name: d['name'] as String,
+      description: d['description'] as String,
+      photoUrl: d['photoUrl'] as String? ?? '',
+      type: VenueType.values.firstWhere(
+        (e) => e.name == d['type'],
+        orElse: () => VenueType.attraction,
+      ),
+      distance: DistanceTag.values.firstWhere(
+        (e) => e.name == d['distance'],
+        orElse: () => DistanceTag.near,
+      ),
+      group: GroupTag.values.firstWhere(
+        (e) => e.name == d['group'],
+        orElse: () => GroupTag.solo,
+      ),
+      price: PriceTag.values.firstWhere(
+        (e) => e.name == d['price'],
+        orElse: () => PriceTag.mid,
+      ),
+      features: (d['features'] as List<dynamic>? ?? [])
+          .map((f) => VenueFeature.values.firstWhere(
+                (e) => e.name == f,
+                orElse: () => VenueFeature.cultural,
+              ))
+          .toList(),
+      address: d['address'] as String? ?? '',
+      category: d['category'] as String? ?? '',
+      tags: List<String>.from(d['tags'] as List<dynamic>? ?? []),
+      lat: (d['lat'] as num?)?.toDouble(),
+      lon: (d['lon'] as num?)?.toDouble(),
+      mapUrl: d['mapUrl'] as String?,
+      rating: (d['rating'] as num?)?.toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toFirestore() => {
+        'name': name,
+        'description': description,
+        'photoUrl': photoUrl,
+        'type': type.name,
+        'distance': distance.name,
+        'group': group.name,
+        'price': price.name,
+        'features': features.map((f) => f.name).toList(),
+        'address': address,
+        'category': category,
+        'tags': tags,
+        if (lat != null) 'lat': lat,
+        if (lon != null) 'lon': lon,
+        if (mapUrl != null) 'mapUrl': mapUrl,
+        if (rating != null) 'rating': rating,
+      };
 }

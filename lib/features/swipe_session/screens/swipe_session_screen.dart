@@ -18,23 +18,11 @@ class SwipeSessionScreen extends ConsumerStatefulWidget {
 
 class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen> {
   late final AppinioSwiperController _controller;
-  bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
     _controller = AppinioSwiperController();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_initialized) {
-      _initialized = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(swipeSessionProvider.notifier).startSession(widget.mode);
-      });
-    }
   }
 
   @override
@@ -65,6 +53,12 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen> {
     final session = ref.watch(swipeSessionProvider);
 
     if (session == null) {
+      // Venues are guaranteed loaded by loading screen — start session immediately
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(swipeSessionProvider.notifier).startSession(widget.mode);
+        }
+      });
       return const Scaffold(
         backgroundColor: AppColors.backgroundDark,
         body: Center(
@@ -74,7 +68,9 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen> {
     }
 
     final remaining = session.totalCards - session.currentIndex;
-    final progress = session.currentIndex / session.totalCards;
+    final progress = session.totalCards > 0
+        ? session.currentIndex / session.totalCards
+        : 0.0;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
