@@ -49,7 +49,8 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen> {
     if (previousIndex >= session.queue.length) return;
 
     final venue = session.queue[previousIndex];
-    final liked = activity is Swipe && activity.direction == AxisDirection.right;
+    final liked =
+        activity is Swipe && activity.direction == AxisDirection.right;
 
     ref.read(swipeSessionProvider.notifier).swipe(venue.id, liked);
 
@@ -65,7 +66,10 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen> {
 
     if (session == null) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        backgroundColor: AppColors.backgroundDark,
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.accent),
+        ),
       );
     }
 
@@ -73,77 +77,90 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen> {
     final progress = session.currentIndex / session.totalCards;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: AppColors.backgroundDark,
       body: SafeArea(
         child: Column(
           children: [
-            // Header
+            // ── Header ────────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
               child: Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white70),
-                    onPressed: () {
+                  // Map
+                  _CircleBtn(
+                    icon: Icons.explore_rounded,
+                    backgroundColor: AppColors.primary,
+                    iconColor: Colors.white,
+                    onTap: () => context.push('/map'),
+                  ),
+
+                  const SizedBox(width: 10),
+
+                  // Back
+                  _CircleBtn(
+                    icon: Icons.arrow_back_rounded,
+                    onTap: () {
                       ref.read(swipeSessionProvider.notifier).reset();
                       context.pop();
                     },
                   ),
+
+                  const SizedBox(width: 12),
+
+                  // Progress bar + mode label
                   Expanded(
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           widget.mode.label,
                           style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                            color: Colors.white54,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        LinearProgressIndicator(
-                          value: progress,
-                          backgroundColor: Colors.white24,
-                          color: AppColors.secondary,
-                          borderRadius: BorderRadius.circular(4),
+                        const SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 6,
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.1),
+                            color: AppColors.accent,
+                          ),
                         ),
                       ],
                     ),
                   ),
+
+                  const SizedBox(width: 12),
+
+                  // Counter badge
                   Container(
-                    margin: const EdgeInsets.only(left: 8),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                        horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Colors.white12,
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: Text(
                       '$remaining',
                       style: const TextStyle(
-                          color: Colors.white70, fontSize: 14),
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
 
-            // Hint
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _SwipeHint(
-                      icon: Icons.close, color: Colors.redAccent, text: 'Не интересно'),
-                  SizedBox(width: 32),
-                  _SwipeHint(
-                      icon: Icons.favorite, color: Colors.greenAccent, text: 'Хочу сходить'),
-                ],
-              ),
-            ),
+            const SizedBox(height: 16),
 
-            // Card stack
+            // ── Card stack ────────────────────────────────────────────────
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -156,6 +173,8 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen> {
                     left: true,
                     right: true,
                   ),
+                  backgroundCardScale: 0.95,
+                  backgroundCardCount: 2,
                   cardBuilder: (context, index) {
                     if (index >= session.queue.length) {
                       return const SizedBox.shrink();
@@ -166,26 +185,35 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen> {
               ),
             ),
 
-            // Manual buttons
+            const SizedBox(height: 16),
+
+            // ── Action buttons ────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(48, 8, 48, 20),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _ActionButton(
-                    icon: Icons.close,
-                    color: Colors.redAccent,
+                  // Dislike
+                  _ActionBtn(
+                    icon: Icons.close_rounded,
+                    color: AppColors.error,
                     onTap: () => _controller.swipeLeft(),
                   ),
-                  _ActionButton(
-                    icon: Icons.favorite,
-                    color: Colors.greenAccent,
+                  const SizedBox(width: 24),
+
+                  // Like — bigger
+                  _ActionBtn(
+                    icon: Icons.favorite_rounded,
+                    color: AppColors.success,
                     onTap: () => _controller.swipeRight(),
                     large: true,
                   ),
-                  _ActionButton(
-                    icon: Icons.skip_next,
-                    color: Colors.white38,
+                  const SizedBox(width: 24),
+
+                  // Skip
+                  _ActionBtn(
+                    icon: Icons.skip_next_rounded,
+                    color: Colors.white30,
                     onTap: () => _controller.swipeLeft(),
                   ),
                 ],
@@ -198,29 +226,10 @@ class _SwipeSessionScreenState extends ConsumerState<SwipeSessionScreen> {
   }
 }
 
-class _SwipeHint extends StatelessWidget {
-  const _SwipeHint(
-      {required this.icon, required this.color, required this.text});
+// ── Buttons ───────────────────────────────────────────────────────────────────
 
-  final IconData icon;
-  final Color color;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: color, size: 16),
-        const SizedBox(width: 4),
-        Text(text,
-            style: TextStyle(color: color, fontSize: 12)),
-      ],
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
+class _ActionBtn extends StatelessWidget {
+  const _ActionBtn({
     required this.icon,
     required this.color,
     required this.onTap,
@@ -234,21 +243,66 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = large ? 64.0 : 52.0;
+    final size = large ? 74.0 : 58.0;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: large ? color.withOpacity(0.15) : Colors.white12,
+          color: large ? color : Colors.white.withValues(alpha: 0.07),
           shape: BoxShape.circle,
-          border: Border.all(
-            color: large ? color : Colors.white24,
-            width: large ? 2.5 : 1.5,
-          ),
+          border: large
+              ? null
+              : Border.all(
+                  color: color.withValues(alpha: 0.5),
+                  width: 1.5,
+                ),
+          boxShadow: large
+              ? [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.4),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : null,
         ),
-        child: Icon(icon, color: color, size: large ? 32 : 24),
+        child: Icon(
+          icon,
+          color: large ? Colors.white : color,
+          size: large ? 32 : 24,
+        ),
+      ),
+    );
+  }
+}
+
+class _CircleBtn extends StatelessWidget {
+  const _CircleBtn({
+    required this.icon,
+    required this.onTap,
+    this.backgroundColor,
+    this.iconColor,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color? backgroundColor;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: backgroundColor ?? Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(icon, color: iconColor ?? Colors.white70, size: 20),
       ),
     );
   }
