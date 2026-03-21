@@ -4,6 +4,61 @@ import 'package:logger/logger.dart';
 import '../models/venue.dart';
 import '../models/swipe_session.dart';
 
+/// Swipe analytics for a venue — shown on the owner's stats screen.
+class VenueStats {
+  const VenueStats({
+    required this.name,
+    required this.impressions,
+    required this.likes,
+    required this.dislikes,
+    required this.modeStats,
+  });
+
+  final String name;
+  final int impressions;
+  final int likes;
+  final int dislikes;
+  // mode.name → {likes, dislikes}
+  final Map<String, Map<String, int>> modeStats;
+
+  double get likeRate =>
+      impressions == 0 ? 0 : (likes / impressions).clamp(0.0, 1.0);
+
+  factory VenueStats.fromMap(String name, Map<String, dynamic> d) {
+    final stats = d['stats'] as Map? ?? {};
+    final rawMode = d['modeStats'] as Map? ?? {};
+    final modeStats = rawMode.map((k, v) {
+      final m = v as Map? ?? {};
+      return MapEntry(
+        k as String,
+        {
+          'likes': (m['likes'] as num?)?.toInt() ?? 0,
+          'dislikes': (m['dislikes'] as num?)?.toInt() ?? 0,
+        },
+      );
+    });
+    return VenueStats(
+      name: name,
+      impressions: (stats['impressions'] as num?)?.toInt() ?? 0,
+      likes: (stats['likes'] as num?)?.toInt() ?? 0,
+      dislikes: (stats['dislikes'] as num?)?.toInt() ?? 0,
+      modeStats: modeStats,
+    );
+  }
+}
+
+/// Result of a single swipe — used for venue analytics.
+class VenueSwipeRecord {
+  const VenueSwipeRecord({
+    required this.venueId,
+    required this.liked,
+    required this.mode,
+  });
+  final String venueId;
+  final bool liked;
+  final SessionMode mode;
+}
+
 class VenueRepository {
   VenueRepository(this._firestore);
 
@@ -117,5 +172,90 @@ class VenueRepository {
 
     selected.shuffle(rng);
     return selected.take(count).toList();
+  }
+
+  /// Adds a user-created venue to Firestore and updates the local cache.
+  /// Returns the Firestore auto-generated ID.
+  Future<String> addVenue(Venue venue, {required String ownerUid}) async {
+    final data = {
+      ...venue.toFirestore(),
+      'createdBy': ownerUid,
+    };
+    final ref = await _firestore.collection('venues').add(data);
+    final saved = Venue(
+      id: ref.id,
+      name: venue.name,
+      description: venue.description,
+      photoUrl: venue.photoUrl,
+      type: venue.type,
+      distance: venue.distance,
+      group: venue.group,
+      price: venue.price,
+      features: venue.features,
+      address: venue.address,
+      category: venue.category,
+      tags: venue.tags,
+      lat: venue.lat,
+      lon: venue.lon,
+      mapUrl: venue.mapUrl,
+      rating: venue.rating,
+    );
+    _cache = List.unmodifiable([..._cache, saved]);
+    return ref.id;
+  }
+
+  /// Deletes a venue from Firestore and removes it from the local cache.
+  Future<void> deleteVenue(String venueId) async {
+    await _firestore.collection('venues').doc(venueId).delete();
+    _cache = List.unmodifiable(_cache.where((v) => v.id != venueId));
+  }
+
+  /// Loads stats for a specific venue (swipe analytics written by SwipeSessionNotifier).
+  Future<VenueStats?> loadVenueStats(String venueId) async {
+    try {
+      final doc = await _firestore.collection('venues').doc(venueId).get();
+      if (!doc.exists) return null;
+      final d = doc.data()! as Map<String, dynamic>;
+      return VenueStats.fromMap(d['name'] as String? ?? '', d);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Batch-writes swipe stats to each venue document in Firestore.
+  /// Tracks: total likes, dislikes, impressions, and per-session-mode breakdown.
+  /// Called once after a session completes (not per-swipe) to minimise writes.
+  Future<void> updateVenueStats(List<VenueSwipeRecord> records) async {
+    if (records.isEmpty) return;
+    final batch = _firestore.batch();
+    final venuesCol = _firestore.collection('venues');
+
+    for (final r in records) {
+      final ref = venuesCol.doc(r.venueId);
+      final modeName = r.mode.name;
+      batch.set(
+        ref,
+        {
+          'stats': {
+            'impressions': FieldValue.increment(1),
+            if (r.liked) 'likes': FieldValue.increment(1),
+            if (!r.liked) 'dislikes': FieldValue.increment(1),
+          },
+          'modeStats': {
+            modeName: {
+              if (r.liked) 'likes': FieldValue.increment(1),
+              if (!r.liked) 'dislikes': FieldValue.increment(1),
+            },
+          },
+        },
+        SetOptions(merge: true),
+      );
+    }
+
+    try {
+      await batch.commit();
+    } catch (e) {
+      _log.e('Failed to update venue stats: $e');
+    }
   }
 }
