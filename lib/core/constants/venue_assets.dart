@@ -22,4 +22,10 @@ const Map<String, String> kVenueAssets = {
   'rest_katenka':              'assets/places/24_restoran_katenka_katyusha.jpg',
   'rest_fisht':                'assets/places/25_restoran_fisht.jpg',
   'rest_stan':                 'assets/places/26_restoran_stan.jpg',
+  'winery_abrau':              'assets/places/27_abrau_dyurso.jpg',
+  'winery_gay_kodzor':         'assets/places/28_vinodelnya_gay_kodzor.jpg',
+  'winery_chateau_de_talu':    'assets/places/29_chateau_de_talu.jpg',
+  'winery_fanagoria':          'assets/places/30_vinodelnya_fanagoriya.jpg',
+  'winery_sober_bash':         'assets/places/31_vinodelnya_sober_bash.jpg',
+  'winery_shato_andre':        'assets/places/32_semeynaya_vinodelnya_shato_andre.jpg',
 };

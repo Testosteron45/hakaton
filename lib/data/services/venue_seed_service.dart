@@ -4,6 +4,7 @@ import '../models/venue.dart';
 
 /// One-time seeder: uploads all venues from RTDB export to Firestore.
 /// Call [seedIfEmpty] on app start — it's a no-op if venues already exist.
+/// Call [seedMissingVenues] to add new venue groups without resetting the DB.
 class VenueSeedService {
   VenueSeedService(this._firestore);
 
@@ -17,13 +18,83 @@ class VenueSeedService {
 
     _log.i('Seeding venues to Firestore...');
 
+    final now = Timestamp.now();
     final batch = _firestore.batch();
     for (final v in _seedVenues) {
       final ref = _firestore.collection('venues').doc(v.id);
-      batch.set(ref, v.toFirestore());
+      batch.set(ref, {...v.toFirestore(), 'createdAt': now});
     }
     await batch.commit();
     _log.i('Seeded ${_seedVenues.length} venues.');
+  }
+
+  /// Adds venues from [candidates] that are not yet in Firestore.
+  /// Safe to call on every start — only writes missing docs.
+  Future<void> seedMissingVenues(List<Venue> candidates) async {
+    final batch = _firestore.batch();
+    var count = 0;
+    final now = Timestamp.now();
+    for (final v in candidates) {
+      final doc = await _firestore.collection('venues').doc(v.id).get();
+      if (!doc.exists) {
+        batch.set(
+          _firestore.collection('venues').doc(v.id),
+          {...v.toFirestore(), 'createdAt': now},
+        );
+        count++;
+      }
+    }
+    if (count > 0) {
+      await batch.commit();
+      _log.i('Seeded $count missing venues.');
+    }
+  }
+
+  /// Re-stamps [createdAt] for all known seed venues with staggered dates
+  /// based on their position in [_seedVenues] (index 0 = oldest).
+  /// Call once to fix venues that were backfilled with identical timestamps.
+  Future<void> restampSeedCreatedAt() async {
+    final base = DateTime(2025, 1, 1);
+    final batch = _firestore.batch();
+    for (var i = 0; i < _seedVenues.length; i++) {
+      final ref = _firestore.collection('venues').doc(_seedVenues[i].id);
+      batch.update(ref, {
+        'createdAt': Timestamp.fromDate(base.add(Duration(hours: i))),
+      });
+    }
+    await batch.commit();
+    _log.i('Restamped createdAt for ${_seedVenues.length} seed venues.');
+  }
+
+  /// Backfills [createdAt] for any venue doc that's missing the field.
+  /// Known seed venues get staggered timestamps based on their seed order
+  /// (later index = newer) so the feed has a meaningful stable order.
+  /// Unknown docs get a single shared old timestamp.
+  /// Safe to run repeatedly — skips docs that already have the timestamp.
+  Future<void> backfillCreatedAt() async {
+    final snap = await _firestore.collection('venues').get();
+    final missing = snap.docs
+        .where((d) => d.data()['createdAt'] == null)
+        .toList();
+
+    if (missing.isEmpty) return;
+
+    // Base date far in the past so real user-added venues stay on top.
+    final base = DateTime(2025, 1, 1);
+    final idToIndex = {
+      for (var i = 0; i < _seedVenues.length; i++) _seedVenues[i].id: i,
+    };
+
+    final batch = _firestore.batch();
+    for (final doc in missing) {
+      final idx = idToIndex[doc.id];
+      final date = idx != null
+          ? base.add(Duration(hours: idx))
+          : base;
+      batch.update(doc.reference, {'createdAt': Timestamp.fromDate(date)});
+    }
+    await batch.commit();
+    _log.i('Backfilled createdAt for ${missing.length} venues.');
   }
 
   // ── Data ─────────────────────────────────────────────────────────────────────
@@ -398,5 +469,113 @@ class VenueSeedService {
       mapUrl: 'https://yandex.ru/maps/?ll=38.9575604%2C45.0199886&z=17&whatshere%5Bpoint%5D=38.9575604%2C45.0199886&whatshere%5Bzoom%5D=17',
       rating: 4.4,
     ),
+
+    // ── Винодельни ────────────────────────────────────────────────────────────
+    Venue(
+      id: 'winery_abrau',
+      name: 'Абрау-Дюрсо',
+      description: 'Один из самых известных центров винного туризма на юге России. Для гостей доступны экскурсии по Русскому винному дому, подземным тоннелям и дегустации игристых и тихих вин.',
+      photoUrl: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=800',
+      type: VenueType.attraction,
+      distance: DistanceTag.far,
+      group: GroupTag.couple,
+      price: PriceTag.mid,
+      features: [VenueFeature.alcohol, VenueFeature.outdoor, VenueFeature.cultural],
+      address: 'пос. Абрау-Дюрсо, Новороссийск, Краснодарский край',
+      category: 'винодельня',
+      tags: ['винодельня', 'экскурсия', 'дегустация', 'игристые вина', 'энотуризм', 'Новороссийск', 'Краснодарский край', 'винный туризм', 'озеро Абрау'],
+      lat: 44.70064, lon: 37.601575,
+      mapUrl: 'https://yandex.ru/maps/?ll=37.601575%2C44.70064&z=17&whatshere%5Bpoint%5D=37.601575%2C44.70064&whatshere%5Bzoom%5D=17',
+      rating: 4.7,
+    ),
+    Venue(
+      id: 'winery_gay_kodzor',
+      name: 'Винодельня «Гай-Кодзор»',
+      description: 'Частная винодельня рядом с Анапой, куда можно попасть по предварительной записи. Гостям предлагают экскурсии по производству, залу ароматов и дегустации нескольких вин.',
+      photoUrl: 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=800',
+      type: VenueType.attraction,
+      distance: DistanceTag.far,
+      group: GroupTag.friends,
+      price: PriceTag.mid,
+      features: [VenueFeature.alcohol, VenueFeature.outdoor, VenueFeature.nature],
+      address: 'Анапский район, Краснодарский край',
+      category: 'винодельня',
+      tags: ['винодельня', 'экскурсия по записи', 'дегустация', 'Анапа', 'терруар', 'частная винодельня', 'энотуризм', 'винный туризм', 'дегустация по записи'],
+      lat: 44.8411833, lon: 37.43805,
+      mapUrl: 'https://yandex.ru/maps/?ll=37.43805%2C44.8411833&z=17&whatshere%5Bpoint%5D=37.43805%2C44.8411833&whatshere%5Bzoom%5D=17',
+      rating: 4.6,
+    ),
+    Venue(
+      id: 'winery_chateau_de_talu',
+      name: 'Chateau de Talu',
+      description: 'Современная винодельня в Геленджике с туристическим комплексом. Здесь проводят экскурсии по винодельне и виноградникам, дегустации и прогулки по живописной территории шато.',
+      photoUrl: 'https://images.unsplash.com/photo-1559494007-9f5847c49d94?w=800',
+      type: VenueType.attraction,
+      distance: DistanceTag.far,
+      group: GroupTag.couple,
+      price: PriceTag.premium,
+      features: [VenueFeature.alcohol, VenueFeature.outdoor, VenueFeature.romantic],
+      address: 'Геленджикский район, Краснодарский край',
+      category: 'винодельня',
+      tags: ['винодельня', 'экскурсия', 'дегустация', 'Геленджик', 'виноградники', 'видовая площадка', 'эногастрономия', 'винный туризм', 'шато'],
+      lat: 44.542243, lon: 38.085729,
+      mapUrl: 'https://yandex.ru/maps/?ll=38.085729%2C44.542243&z=17&whatshere%5Bpoint%5D=38.085729%2C44.542243&whatshere%5Bzoom%5D=17',
+      rating: 4.8,
+    ),
+    Venue(
+      id: 'winery_fanagoria',
+      name: 'Винодельня «Фанагория»',
+      description: 'Крупная кубанская винодельня в поселке Сенной. Для посетителей доступны винные туры с экскурсиями по современному и античному производству, подвалам и дегустациями.',
+      photoUrl: 'https://images.unsplash.com/photo-1474722883778-792e7990302f?w=800',
+      type: VenueType.attraction,
+      distance: DistanceTag.far,
+      group: GroupTag.friends,
+      price: PriceTag.mid,
+      features: [VenueFeature.alcohol, VenueFeature.cultural, VenueFeature.historical],
+      address: 'пос. Сенной, Темрюкский район, Краснодарский край',
+      category: 'винодельня',
+      tags: ['винодельня', 'экскурсия', 'дегустация', 'Сенной', 'Тамань', 'винный тур', 'кубанские вина', 'винный туризм', 'Темрюкский район'],
+      lat: 45.28363, lon: 36.990865,
+      mapUrl: 'https://yandex.ru/maps/?ll=36.990865%2C45.28363&z=17&whatshere%5Bpoint%5D=36.990865%2C45.28363&whatshere%5Bzoom%5D=17',
+      rating: 4.5,
+    ),
+    Venue(
+      id: 'winery_sober_bash',
+      name: 'Винодельня «Собер Баш»',
+      description: 'Винодельня недалеко от Краснодара, куда приезжают на экскурсии и дегустации. Гостям предлагают прогулку по виноградникам, знакомство с производством и несколько дегустационных сетов.',
+      photoUrl: 'https://images.unsplash.com/photo-1543418219-44e30b057fea?w=800',
+      type: VenueType.attraction,
+      distance: DistanceTag.far,
+      group: GroupTag.friends,
+      price: PriceTag.mid,
+      features: [VenueFeature.alcohol, VenueFeature.outdoor, VenueFeature.nature],
+      address: 'Северский район, Краснодарский край',
+      category: 'винодельня',
+      tags: ['винодельня', 'экскурсия', 'дегустация', 'рядом с Краснодаром', 'виноградники', 'Северский район', 'энотуризм', 'винный туризм', 'выезд из Краснодара'],
+      lat: 44.75167833933321, lon: 38.7430500984192,
+      mapUrl: 'https://yandex.ru/maps/?ll=38.7430500984192%2C44.75167833933321&z=17&whatshere%5Bpoint%5D=38.7430500984192%2C44.75167833933321&whatshere%5Bzoom%5D=17',
+      rating: 4.6,
+    ),
+    Venue(
+      id: 'winery_shato_andre',
+      name: 'Семейная винодельня «Шато Андре»',
+      description: 'Агротуристический комплекс с винодельней, виноградниками и дегустациями в Крымском районе. Посещение доступно по предварительному бронированию, на территории есть ресторан и прогулочные зоны.',
+      photoUrl: 'https://images.unsplash.com/photo-1528823872057-9c018a7a7553?w=800',
+      type: VenueType.attraction,
+      distance: DistanceTag.far,
+      group: GroupTag.family,
+      price: PriceTag.mid,
+      features: [VenueFeature.alcohol, VenueFeature.outdoor, VenueFeature.nature, VenueFeature.kids],
+      address: 'Крымский район, Краснодарский край',
+      category: 'винодельня',
+      tags: ['винодельня', 'экскурсия', 'дегустация', 'Крымский район', 'агротуризм', 'виноградники', 'семейный отдых', 'винный туризм', 'эстетичная локация'],
+      lat: 45.026244, lon: 37.622103,
+      mapUrl: 'https://yandex.ru/maps/?ll=37.622103%2C45.026244&z=17&whatshere%5Bpoint%5D=37.622103%2C45.026244&whatshere%5Bzoom%5D=17',
+      rating: 4.7,
+    ),
   ];
+
+  static List<Venue> get wineries => _seedVenues
+      .where((v) => v.category == 'винодельня')
+      .toList();
 }

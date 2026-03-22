@@ -155,7 +155,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'Куда пойти в Краснодаре?',
+                        'Куда пойти?',
                         style: textTheme.headlineMedium?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,

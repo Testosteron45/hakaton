@@ -68,6 +68,7 @@ class Venue {
     this.lon,
     this.mapUrl,
     this.rating,
+    this.createdAt,
   });
 
   final String id;
@@ -90,6 +91,7 @@ class Venue {
   final String? mapUrl;
   // Yandex Maps rating (1.0–5.0)
   final double? rating;
+  final DateTime? createdAt;
 
   factory Venue.fromFirestore(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
@@ -127,6 +129,7 @@ class Venue {
       lon: (d['lon'] as num?)?.toDouble(),
       mapUrl: d['mapUrl'] as String?,
       rating: (d['rating'] as num?)?.toDouble(),
+      createdAt: (d['createdAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -146,5 +149,6 @@ class Venue {
         if (lon != null) 'lon': lon,
         if (mapUrl != null) 'mapUrl': mapUrl,
         if (rating != null) 'rating': rating,
+        if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),
       };
 }

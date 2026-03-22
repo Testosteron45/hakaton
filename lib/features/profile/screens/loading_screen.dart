@@ -39,7 +39,7 @@ class LoadingScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text(
-                    'Куда пойти в Краснодаре?',
+                    'Куда пойти?',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 28,
