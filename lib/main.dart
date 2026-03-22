@@ -39,7 +39,7 @@ class KrasnodarTravelApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
     return MaterialApp.router(
-      title: 'Куда пойти в Краснодаре',
+      title: 'Куда пойти',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,

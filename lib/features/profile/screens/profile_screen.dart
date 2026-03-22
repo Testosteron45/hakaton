@@ -40,7 +40,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final ref = this.ref;
     final user = ref.watch(authStateProvider).valueOrNull;
     final profileAsync = ref.watch(userProfileProvider);
-    final venues = ref.watch(venueRepositoryProvider).getAll();
+    final venues = ref.watch(venueRepositoryProvider).getAll().toList()
+      ..sort((a, b) {
+        final aDate = a.createdAt;
+        final bDate = b.createdAt;
+        if (aDate == null && bDate == null) {
+          return (b.rating ?? 0).compareTo(a.rating ?? 0);
+        }
+        if (aDate == null) return 1;
+        if (bDate == null) return -1;
+        final dateCmp = bDate.compareTo(aDate);
+        if (dateCmp != 0) return dateCmp;
+        return (b.rating ?? 0).compareTo(a.rating ?? 0);
+      });
     final swipeSession = ref.watch(swipeSessionProvider);
     final lastCompletedLikedIds = ref.watch(lastCompletedLikedVenueIdsProvider);
     final venuesById = {

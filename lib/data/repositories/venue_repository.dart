@@ -185,9 +185,11 @@ class VenueRepository {
   /// Adds a user-created venue to Firestore and updates the local cache.
   /// Returns the Firestore auto-generated ID.
   Future<String> addVenue(Venue venue, {required String ownerUid}) async {
+    final now = DateTime.now();
     final data = {
       ...venue.toFirestore(),
       'createdBy': ownerUid,
+      'createdAt': Timestamp.fromDate(now),
     };
     final ref = await _firestore.collection('venues').add(data);
     final saved = Venue(
@@ -207,6 +209,7 @@ class VenueRepository {
       lon: venue.lon,
       mapUrl: venue.mapUrl,
       rating: venue.rating,
+      createdAt: now,
     );
     _cache = List.unmodifiable([..._cache, saved]);
     return ref.id;

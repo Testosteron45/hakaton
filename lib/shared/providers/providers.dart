@@ -38,9 +38,13 @@ final venuesInitProvider = FutureProvider<void>((ref) async {
   final repo = ref.read(venueRepositoryProvider);
   final firestore = ref.read(firestoreProvider);
   try {
-    await VenueSeedService(firestore)
-        .seedIfEmpty()
-        .timeout(const Duration(seconds: 10));
+    final seeder = VenueSeedService(firestore);
+    await seeder.seedIfEmpty().timeout(const Duration(seconds: 10));
+    await seeder
+        .seedMissingVenues(VenueSeedService.wineries)
+        .timeout(const Duration(seconds: 15));
+    await seeder.backfillCreatedAt().timeout(const Duration(seconds: 15));
+    await seeder.restampSeedCreatedAt().timeout(const Duration(seconds: 15));
     await repo.loadFromFirestore().timeout(const Duration(seconds: 10));
   } catch (_) {
     // Firestore недоступен — продолжаем без данных
